@@ -28,6 +28,18 @@ metadata:
 | **品牌暗色产品片** | 品牌色暗色主题 + 真实产品 UI + 3D 硬件 | 品牌色板映射、真 3D 建模、产品界面复刻 |
 | **暗房 / 银盐** | 中性纸白 + 碳黑 + 一个安全灯红，无网点无霓虹 | 光晕 halation、片门微抖、两级银盐颗粒、点云刻线 |
 
+> ## ⚠️ 默认出口不在这里（2026-09-28 用户定调）
+>
+> **常规成片默认走本机已有的 Remotion 产线**（耶莱 / 亚莱 / 克莱 / 梦莱 / 企鹅 / 排行榜 1&2），
+> 从最接近的那条复制一份改数据文件即可。**本技能是特殊风格的最后手段**，
+> 只在需要它独有能力时才用（点云写实 3D / 印刷分色 / 普朗克真彩色 / 合成器配乐）。
+>
+> 用它的时候两条硬规矩：**编码走 `h264_nvenc`**（实测比 libx264 快 3.7 倍、体积小 28%、
+> PSNR 差 0.9 dB），**并行度不许吃满全机**（一场一核足够，用户原话「cpu爆了」）。
+>
+> **注意：Remotion 也不是 GPU 渲染**——它的帧同样是 headless Chrome 在 CPU 上画的，
+> 显卡真正出力的只有**编码**那一步。路由与配方见 `references/remotion-default.md`。
+
 ## DSH 运行约定
 
 - `{skill_dir}` 是本 `SKILL.md` 所在目录。引擎、模板、字体、参考文档都在其下，用绝对路径定位。
@@ -151,6 +163,7 @@ print('mean', bg.mean(0).round(1), 'median', np.median(bg,0), 'p95', np.percenti
 | 配乐合成（打击乐/贝斯/铺底/旋律） | `references/audio-dsp.md` | `engine/dsp.py` |
 | 出片前自检、已知 bug | `references/gotchas.md` | — |
 | 渲染太慢 / 要不要上 GPU | `references/performance.md` | `scripts/perf_probe.py` |
+| 默认走哪条路线 / 显卡在哪一步出力 | `references/remotion-default.md` | — |
 
 ### 交付自检（渲完必做）
 
@@ -201,7 +214,7 @@ ffmpeg -hide_banner -i out/<name>.mp4 -af loudnorm=print_format=summary -f null 
 │   └── dsp.py         合成器 DSP：FFT 时变滤波、磁带抖晃、混响、频谱分析
 ├── template/          可跑的最小工程（8 场景骨架 + 一段配乐）
 ├── scripts/new_reel.py  从模板起一支新片
-├── references/        设计语法 / 3D / 印刷 / 音频 / 坑 / 性能
+├── references/        设计语法 / 3D / 印刷 / 音频 / 坑 / 性能 / 默认路线
 └── assets/fonts/      随包字体（Archivo Black / Inter / JetBrains Mono /
                        Bodoni Moda / Fraunces，均为 OFL，可随包分发）
 ```
