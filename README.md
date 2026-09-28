@@ -10,9 +10,17 @@
 这是一个 Agent Skill（给 ZCode / Claude Code 这类编码 Agent 用）：装上之后，
 一句「用代码做一条 15 秒动态图形片」就能从零到出片。
 
-| 暗色科技 · 流场 | 丝网印 / riso · 三色套印 | 分色版套准 |
+| 暗色科技 · 流场 | 丝网印 / riso · 封面 | 3D 建模 · 点云渲染 |
 |---|---|---|
-| ![dark](docs/preview/03-dark-flow.jpg) | ![riso](docs/preview/02-riso-cover.jpg) | ![reg](docs/preview/05-riso-registration.jpg) |
+| ![flow](docs/preview/01-dark-flow.jpg) | ![riso](docs/preview/02-riso-cover.jpg) | ![rack](docs/preview/03-rack-3d.jpg) |
+
+3D 机柜：六台机箱由参数曲面采样成点云，按深度排序散射渲染（近处遮住远处）。
+前面板的通风栅、硬盘位、状态灯不是贴图——是把面板四角做同样的旋转投影后，
+**在那个面的平面里**画出来的，所以透视随旋转正确变化。
+
+分色版套准（印刷管线的核心：三块油墨版各自偏移，再「啪」地归位）：
+
+![registration](docs/preview/05-riso-registration.jpg)
 
 粒子汇聚标识：5200 个粒子从 logo 的 **alpha 通道**采样目标位置，螺旋入场、落位、
 再交接给清晰的标识——所以拼出来的是**真 logo**，不是近似形状。

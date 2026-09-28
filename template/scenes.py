@@ -380,11 +380,12 @@ class Dimensional:
                 led = proj([(-hx + 0.04, y, hz + 0.008)])[0]
                 if led:
                     p.dot(led[0], led[1], 3.4, col, a * (0.55 + 0.45 * np.sin(t * 4 + i)))
-        left = ["FORM / KNOT", f"BODY {self.NODES}", "EDGES 30", "SHADE 2S", "RIM 1.0"]
+        left = ["MESH / CHASSIS", f"BODIES {self.NODES}", "NIC 16", "PSU 2N",
+                "FANS 12"]
         for i, s in enumerate(left):
             _mono(p, 64, 152 + i * 17, s, T.ACCENT_BR if i == 0 else T.GREY, 9.5, 1.5,
                   a * (0.9 if i else 1.0))
-        right = ["PRINT / WEB", "MOTION 30F", "COLOUR RGB", "SOURCE OPEN"]
+        right = ["BUILD / PYTHON", "MOTION 30F", "POINTS 900K", "SOURCE OPEN"]
         for i, s in enumerate(right):
             _mono(p, W - 64, 152 + i * 17, s, T.ACCENT_BR if i == 0 else T.GREY, 9.5, 1.5,
                   a * (0.9 if i else 1.0), "rs")
