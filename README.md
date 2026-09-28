@@ -10,9 +10,9 @@
 这是一个 Agent Skill（给 ZCode / Claude Code 这类编码 Agent 用）：装上之后，
 一句「用代码做一条 15 秒动态图形片」就能从零到出片。
 
-| 暗色科技 · 流场 | 丝网印 / riso · 封面 | 3D 建模 · 点云渲染 |
+| 暗色科技 · 流场 | 丝网印 / riso · 封面 | 纸艺 · DECKLE |
 |---|---|---|
-| ![flow](docs/preview/gifs/flow-field.gif) | ![riso](docs/preview/gifs/riso-cover.gif) | ![rack](docs/preview/gifs/rack-3d.gif) |
+| ![flow](docs/preview/gifs/flow-field.gif) | ![riso](docs/preview/gifs/riso-cover.gif) | ![deckle](docs/preview/gifs/deckle.gif) |
 | **银盐 / 暗房 · SILVER** | **恒星 · KELVIN** | **氰版蓝图 · MOTION ENGINE** |
 | ![silver](docs/preview/gifs/silver.gif) | ![kelvin](docs/preview/gifs/kelvin.gif) | ![blueprint](docs/preview/gifs/blueprint.gif) |
 
