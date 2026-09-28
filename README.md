@@ -13,10 +13,10 @@
 | 暗色科技 · 流场 | 丝网印 / riso · 封面 | 3D 建模 · 点云渲染 |
 |---|---|---|
 | ![flow](docs/preview/gifs/flow-field.gif) | ![riso](docs/preview/gifs/riso-cover.gif) | ![rack](docs/preview/gifs/rack-3d.gif) |
-| **银盐 / 暗房 · SILVER** | **恒星 · KELVIN** | |
-| ![silver](docs/preview/gifs/silver.gif) | ![kelvin](docs/preview/gifs/kelvin.gif) | |
-| 粒子汇聚 · 真 logo | 分色版套准 · 印刷管线 | |
-| ![assembly](docs/preview/gifs/logo-assembly.gif) | ![registration](docs/preview/gifs/registration.gif) | |
+| **银盐 / 暗房 · SILVER** | **恒星 · KELVIN** | 分色版套准 · 印刷管线 |
+| ![silver](docs/preview/gifs/silver.gif) | ![kelvin](docs/preview/gifs/kelvin.gif) | ![registration](docs/preview/gifs/registration.gif) |
+| 粒子汇聚 · 真 logo | | |
+| ![assembly](docs/preview/gifs/logo-assembly.gif) | | |
 
 3D 机柜：六台机箱由参数曲面采样成点云，按深度排序散射渲染（近处遮住远处）。
 前面板的通风栅、硬盘位、状态灯不是贴图——是把面板四角做同样的旋转投影后，
