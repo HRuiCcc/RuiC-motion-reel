@@ -1,0 +1,200 @@
+---
+name: RuiC-motion-reel
+description: "用代码生成 15 秒动态图形（Motion Graphics）成片：自研渲染引擎（2× 超采样矢量/文字 + bloom/色差/颗粒）、真 3D 点云渲染、丝网印/riso 四色分色、代码合成配乐，画面与音乐全部由代码产出、不用任何外部美术素材、不用 AE。当用户说「用代码做个动效视频/动态图形/motion graphics」「生成一条 15 秒作品集样片/产品片/宣传短片」「按某种风格做视频」「给某个品牌/产品做一条片子」「复刻某条动效片的风格」，或要改已有片子的品牌、配色、节奏、镜头时使用。触发词：动效视频、动态图形、motion graphics、作品集样片、产品片、15 秒视频、代码生成视频、RuiC-motion-reel。"
+user-invocable: true
+metadata:
+  dsh:
+    compatibility: native
+    requires:
+      - python3
+      - ffmpeg
+---
+
+# RuiC-motion-reel —— 代码生成动态图形成片
+
+一条产线：**从零用代码渲染出一支 15 秒动态图形片**。画面（字体、3D、粒子、印刷分色）
+和音乐（合成器）全部由代码产出，不依赖任何外部美术素材、不打开 After Effects。
+
+已经用它做过三类视觉语言：
+
+| 语言 | 观感 | 关键手法 |
+|---|---|---|
+| **暗色科技** | 近黑底板 + 霓虹青/品红、HUD 套件、发光字体 | 加色光缓冲、bloom、色差、扫描线 |
+| **丝网印 / riso** | 暖米纸张 + 荧光三色油墨、网点、套印 | multiply 叠印、半调网点、套印偏移、纸纹 |
+| **品牌暗色产品片** | 品牌色暗色主题 + 真实产品 UI + 3D 硬件 | 品牌色板映射、真 3D 建模、产品界面复刻 |
+
+## DSH 运行约定
+
+- `{skill_dir}` 是本 `SKILL.md` 所在目录。引擎、模板、字体、参考文档都在其下，用绝对路径定位。
+- **产出写进用户指定的项目目录**，不改 `{skill_dir}` 内的模板真源；需要模板时先复制。
+- 渲染是 CPU 密集的长任务（15 秒 ≈ 1~3 分钟多进程），开工前说清目标目录与预计耗时。
+- 成片审核由用户做：渲完把文件路径直接给用户。
+
+---
+
+## 一、先判断：是「新做一支」还是「改已有的」
+
+| 用户意图 | 走哪条 |
+|---|---|
+| 新做一支（没指定风格） | 先按下面「二」问清 3 件事，再按「四」开工 |
+| 新做一支（指定了品牌/配色/参考片） | 先做「三」的品牌取色，再按「四」开工 |
+| 改已有片子（改品牌/配色/节奏/镜头） | 进该片目录，只改 `theme.py` + 相关 scene，**不要重建工程** |
+| 只要某个镜头/效果 | 从 `template/scenes.py` 抽对应类，单独 `--at` 渲染验证 |
+
+---
+
+## 二、开工前必须定下的三件事
+
+这三件事决定了整支片子的骨架，**含糊就必问**，不要自己替用户选完就开工：
+
+1. **时长与节奏**。默认 15 秒。节奏必须落在一个音乐网格上（见下），别用"大概每 2 秒切一次"。
+2. **说话对象与文案**。是产品片、作品集样片还是品牌片？文案用什么语言？有没有必须出现/必须不出现的词（例如某些片子要求全英文、要出现某域名、不能出现某个品牌）。
+3. **品牌色**。有品牌就必须**取实测色值**，不要凭印象挑（见「三」）。
+
+### 时间网格：先定 BPM，再定镜头
+
+整片锁在一个音乐网格上，**每个场景正好一小节**，每次剪辑都落在强拍上。
+所以「画面节奏」和「音乐」是同一套时间轴，而不是后期硬凑的。
+
+```
+秒数 = 小节数 × 每小节拍数 × 60 / BPM
+BPM = 每小节拍数 × 60 × 小节数 / 总秒数
+```
+
+15 秒常用组合（任选，别自己发明分数）：
+
+| 小节数（=镜头数） | BPM | 每小节 | 适合 |
+|---|---|---|---|
+| 8 | 128 | 1.875 s | 快切，科技/产品片 |
+| 6 | 96 | 2.500 s | 慢翻页，编辑/读物感 |
+| 5 | 80 | 3.000 s | 从容，品牌/氛围 |
+| 4 | 64 | 3.750 s | 极少镜头，一件小事讲透 |
+
+**8 小节 ≠ 必须 8 个场景**：场景 02 可以是「一拍一个词」的四个词，等于把 1 小节拆成 4 拍用。
+
+---
+
+## 三、品牌取色：量，不要猜
+
+**这是整条产线最容易翻车、也最容易做出「专业感」的地方。**
+
+1. **先找本机已有的实测色板**。用户往往已经为某个品牌做过片子，颜色是当时从截图里
+   聚类采样出来的——比任何猜测都准。搜：
+   ```bash
+   ls ~/.agents/skills | grep -i <品牌相关词>
+   grep -rn "#[0-9a-fA-F]\{6\}" ~/.agents/skills/<那个skill>/template/ --include="*.ts*"
+   ```
+2. **再核对官网**（官网营销色和产品界面色经常不是同一个绿）：
+   ```bash
+   curl -sL -A "Mozilla/5.0" https://<官网>/ -o /tmp/site.html
+   grep -o -i '#[0-9a-f]\{6\}' /tmp/site.html | tr 'A-Z' 'a-z' | sort | uniq -c | sort -rn | head -15
+   ```
+3. **暗色片怎么用亮色品牌的色板**：暗色版本不是另挑一套色，而是**把品牌色放到曝光另一端**。
+   底板用「品牌墨色压暗」的深色（例如产品标题墨蓝压成近黑），主色仍是品牌色本体，
+   再取色板的语义色（信息蓝 / 警告橙 / 危险红）做读数，这样片子立刻就是这个品牌的。
+4. **字体挑之前先量**。若要贴近某条参考片，量它定稿字块的**字高 / 字宽比**再选字体，
+   不要凭眼感（见 `references/design-grammar.md` 里的比例核对法）。
+
+---
+
+## 四、制作流程
+
+```bash
+# 1) 从模板起一支新片（会把 engine/ 与 template/ 复制成自包含工程）
+python3 {skill_dir}/scripts/new_reel.py <片子目录> --name <包名>
+
+cd <片子目录>
+# 2) 改 theme.py：品牌、时间网格、色板、文案
+# 3) 改 scenes.py：八个场景
+# 4) 逐场审阅（关键！不要渲完再看）
+python3 -m <包名>.build --stills 0      # 一场抽 7 帧拼长图
+python3 -m <包名>.build --at 3:1.20     # 某一拍的单帧全分辨率
+# 5) 全片
+python3 -m <包名>.build
+```
+
+### 每场的实现顺序（照这个顺序做，返工最少）
+
+1. **底板 + 环境光**（背景、地平线/纸纹、网格）→ `--at` 渲一帧，先确认**亮度对**
+2. **主体**（大字 / 3D / 图形）→ 再看一帧
+3. **运动**（入场、缓动、错帧）→ 抽 7 帧看时间轴
+4. **HUD / 版式细节** → 最后加，它是最容易喧宾夺主的东西
+
+### 亮度必须对着参考片量，不能靠眼睛
+
+在同尺寸同色调下比较**均值 / 中位数 / p95**，暗场常见偏差是「整体亮了 2~3 倍」：
+
+```bash
+ffmpeg -v error -ss <t> -i ref.mp4 -frames:v 1 -f rawvideo -pix_fmt rgb24 - | python3 -c "
+import sys, numpy as np
+a = np.frombuffer(sys.stdin.buffer.read(), np.uint8).reshape(720,1280,3).astype(np.float32)
+bg = a[::6,::6].reshape(-1,3)
+print('mean', bg.mean(0).round(1), 'median', np.median(bg,0), 'p95', np.percentile(bg,95,0))"
+```
+
+差值大通常不是「调色」问题，而是**管线里多做了一次线性→sRGB 编码**（见 `references/gotchas.md`）。
+
+---
+
+## 五、可选能力（按需读参考文档）
+
+| 要做的效果 | 读哪个 | 引擎入口 |
+|---|---|---|
+| 类型排版、字号标定、HUD 版式 | `references/design-grammar.md` | `engine/fonts.py`, `engine/core.py` |
+| 真 3D（建模、点云渲染、隐藏线） | `references/three-d.md` | `engine/three.py` |
+| 印刷/riso 分色、叠印、纸纹 | `references/print-pipeline.md` | `engine/core.py` |
+| 配乐合成（打击乐/贝斯/铺底/旋律） | `references/audio-dsp.md` | `engine/dsp.py` |
+| 出片前自检、已知 bug | `references/gotchas.md` | — |
+
+### 交付自检（渲完必做）
+
+```bash
+ffprobe -v error -select_streams v:0 -show_entries stream=width,height,nb_frames,r_frame_rate \
+  -show_entries format=duration -of default=noprint_wrappers=1 out/<name>.mp4
+# 响度：真峰必须 < 0 dBTP（AAC 编码后采样间峰值会超过采样峰值，要留余量）
+ffmpeg -hide_banner -i out/<name>.mp4 -af loudnorm=print_format=summary -f null - 2>&1 \
+  | grep -E "Input Integrated|Input True Peak"
+```
+
+常见规格：1280×720 或 1920×1080、30fps、15.000 秒整、H.264 CRF 15~16、AAC 256k、
+约 −9 ~ −13 LUFS、真峰 −1.0 ~ −0.5 dBTP。
+
+---
+
+## 六、硬规矩
+
+1. **时间必须落在整拍网格上**，片长精确到 15.000 秒（帧数 = 秒 × fps 必须是整数）。
+2. **品牌色必须实测**，不准凭印象挑；品牌片必须出现该品牌的 logo 或域名时，用真素材
+   （从官网/已有 skill 里取原始 PNG/SVG），不要手画。
+3. **文案语言必须按用户要求核对**。要求全英文就扫一遍所有字符串，别留中文：
+   ```bash
+   python3 -c "
+   import re,pathlib
+   s=''.join(pathlib.Path(p).read_text() for p in pathlib.Path('.').rglob('*.py'))
+   print('中文字符:', re.findall(r'[\u4e00-\u9fff]+', s) or '无')"
+   ```
+4. **不要替用户决定对外发布**。渲完只给文件路径；要上传/分享必须用户明确说了才做。
+   若某品牌的既有 skill 写了「严禁外发」，默认遵守，用户明确要求覆盖时才上传。
+5. **不许改 `{skill_dir}` 里的模板真源**——一切改动落在用户项目目录。
+6. 逐场审阅至少一轮（`--stills`），不要直接渲全片再看。
+
+---
+
+## 七、文件布局
+
+```
+{skill_dir}/
+├── SKILL.md
+├── engine/            共享引擎（复制进每个项目）
+│   ├── core.py        渲染核心：Canvas / 矢量文字通道 / bloom / 色差 / 颗粒 /
+│   │                  印刷原语（multiply 叠印、网点、纸纹、套印偏移）
+│   ├── three.py       3D：参数曲面 / 相机 / 点云排序散射渲染 / 隐藏线
+│   ├── fonts.py       字体栈 + 字距排版 + 基线换算（含 getbbox 的 ascent 坑）
+│   ├── anim.py        缓动、错帧、值噪声
+│   └── dsp.py         合成器 DSP：FFT 时变滤波、磁带抖晃、混响、频谱分析
+├── template/          可跑的最小工程（8 场景骨架 + 一段配乐）
+├── scripts/new_reel.py  从模板起一支新片
+├── references/        设计语法 / 3D / 印刷 / 音频 / 坑
+└── assets/fonts/      随包字体（Archivo Black / Inter / JetBrains Mono /
+                       Bodoni Moda / Fraunces，均为 OFL，可随包分发）
+```
