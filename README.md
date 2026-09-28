@@ -14,10 +14,6 @@
 |---|---|---|
 | ![dark](docs/preview/03-dark-flow.jpg) | ![riso](docs/preview/02-riso-cover.jpg) | ![reg](docs/preview/05-riso-registration.jpg) |
 
-标题建立（模板默认产物，占位品牌 `STUDIO`）：
-
-![opener](docs/preview/01-dark-opener.jpg)
-
 粒子汇聚标识：5200 个粒子从 logo 的 **alpha 通道**采样目标位置，螺旋入场、落位、
 再交接给清晰的标识——所以拼出来的是**真 logo**，不是近似形状。
 
