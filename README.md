@@ -27,6 +27,17 @@
 
 ![assembly](docs/preview/04-particle-assembly.jpg)
 
+### 也可以完全不是这三类
+
+同一套引擎做出来的第四种语言是**银盐印相 / 暗房**：中性纸白 + 碳黑 + 一个安全灯红，
+没有网点也没有霓虹。质感靠**光晕（halation）**、**片门微抖**和**两级银盐颗粒**；
+主角是一颗 24 万点的点云环面结，按法线算明暗再映射成**油墨密度**，出来是铜版刻线。
+六小节＝暗房六道工序（曝光 / 显影 / 骤停 / 定影 / 水洗 / 落片），
+收尾一行字是它的底牌：**NO CAMERA · NO FILM · NO SAMPLES**。
+
+![develop](docs/preview/06-silver-develop.jpg)
+![stop](docs/preview/07-silver-stop.jpg)
+
 ---
 
 ## 它能做什么
@@ -94,7 +105,8 @@ references/            按需加载的细节文档
   three-d.md           3D 引擎用法与配方
   print-pipeline.md    分色、网点、叠印、版面家具
   audio-dsp.md         配乐合成
-  gotchas.md           踩过的坑（20+ 条，症状与真因）
+  gotchas.md           踩过的坑（近 30 条，症状与真因）
+  performance.md       一帧花在哪、换显卡能省多少（实测）
 assets/fonts/          随包字体（OFL 1.1，见 NOTICE.md）
 ```
 

@@ -1,6 +1,6 @@
 ---
-name: RuiC-motion-reel
-description: "用代码生成 15 秒动态图形（Motion Graphics）成片：自研渲染引擎（2× 超采样矢量/文字 + bloom/色差/颗粒）、真 3D 点云渲染、丝网印/riso 四色分色、代码合成配乐，画面与音乐全部由代码产出、不用任何外部美术素材、不用 AE。当用户说「用代码做个动效视频/动态图形/motion graphics」「生成一条 15 秒作品集样片/产品片/宣传短片」「按某种风格做视频」「给某个品牌/产品做一条片子」「复刻某条动效片的风格」，或要改已有片子的品牌、配色、节奏、镜头时使用。触发词：动效视频、动态图形、motion graphics、作品集样片、产品片、15 秒视频、代码生成视频、RuiC-motion-reel。"
+name: ruic-motion-reel
+description: "用代码生成 15 秒动态图形（Motion Graphics）成片：自研渲染引擎（2× 超采样矢量/文字 + bloom/色差/颗粒）、真 3D 点云渲染、丝网印/riso 四色分色、代码合成配乐，画面与音乐全部由代码产出、不用任何外部美术素材、不用 AE。当用户说「用代码做个动效视频/动态图形/motion graphics」「生成一条 15 秒作品集样片/产品片/宣传短片」「按某种风格做视频」「给某个品牌/产品做一条片子」「复刻某条动效片的风格」，或要改已有片子的品牌、配色、节奏、镜头时使用。触发词：动效视频、动态图形、motion graphics、作品集样片、产品片、15 秒视频、代码生成视频、ruic-motion-reel。"
 user-invocable: true
 metadata:
   dsh:
@@ -19,13 +19,14 @@ metadata:
 > **不绑定模型**：纯 Python + ffmpeg，不含任何模型专属依赖，
 > 支持各大主流多模态模型——任何能读写文件、执行命令的编码 Agent 都能用。
 
-已经用它做过三类视觉语言：
+已经用它做过四类视觉语言：
 
 | 语言 | 观感 | 关键手法 |
 |---|---|---|
 | **暗色科技** | 近黑底板 + 霓虹青/品红、HUD 套件、发光字体 | 加色光缓冲、bloom、色差、扫描线 |
 | **丝网印 / riso** | 暖米纸张 + 荧光三色油墨、网点、套印 | multiply 叠印、半调网点、套印偏移、纸纹 |
 | **品牌暗色产品片** | 品牌色暗色主题 + 真实产品 UI + 3D 硬件 | 品牌色板映射、真 3D 建模、产品界面复刻 |
+| **暗房 / 银盐** | 中性纸白 + 碳黑 + 一个安全灯红，无网点无霓虹 | 光晕 halation、片门微抖、两级银盐颗粒、点云刻线 |
 
 ## DSH 运行约定
 
@@ -149,13 +150,15 @@ print('mean', bg.mean(0).round(1), 'median', np.median(bg,0), 'p95', np.percenti
 | 印刷/riso 分色、叠印、纸纹 | `references/print-pipeline.md` | `engine/core.py` |
 | 配乐合成（打击乐/贝斯/铺底/旋律） | `references/audio-dsp.md` | `engine/dsp.py` |
 | 出片前自检、已知 bug | `references/gotchas.md` | — |
+| 渲染太慢 / 要不要上 GPU | `references/performance.md` | `scripts/perf_probe.py` |
 
 ### 交付自检（渲完必做）
 
 ```bash
 ffprobe -v error -select_streams v:0 -show_entries stream=width,height,nb_frames,r_frame_rate \
   -show_entries format=duration -of default=noprint_wrappers=1 out/<name>.mp4
-# 响度：真峰必须 < 0 dBTP（AAC 编码后采样间峰值会超过采样峰值，要留余量）
+# 响度：真峰必须 < 0 dBTP。波形文件的真峰不够——AAC 会把采样间峰值再抬上去，
+# 所以量的是**解码回来的**这条；超过 −0.5 dBTP 先换 384k 再谈降电平（见 gotchas 27、28）
 ffmpeg -hide_banner -i out/<name>.mp4 -af loudnorm=print_format=summary -f null - 2>&1 \
   | grep -E "Input Integrated|Input True Peak"
 ```
@@ -198,7 +201,7 @@ ffmpeg -hide_banner -i out/<name>.mp4 -af loudnorm=print_format=summary -f null 
 │   └── dsp.py         合成器 DSP：FFT 时变滤波、磁带抖晃、混响、频谱分析
 ├── template/          可跑的最小工程（8 场景骨架 + 一段配乐）
 ├── scripts/new_reel.py  从模板起一支新片
-├── references/        设计语法 / 3D / 印刷 / 音频 / 坑
+├── references/        设计语法 / 3D / 印刷 / 音频 / 坑 / 性能
 └── assets/fonts/      随包字体（Archivo Black / Inter / JetBrains Mono /
                        Bodoni Moda / Fraunces，均为 OFL，可随包分发）
 ```
