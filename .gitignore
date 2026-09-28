@@ -4,3 +4,4 @@ out/
 *.mp4
 *.wav
 .DS_Store
+!docs/films/*.mp4
