@@ -38,7 +38,7 @@
 
 ```bash
 git clone https://github.com/HRuiCcc/RuiC-motion-reel.git \
-  ~/.agents/skills/RuiC-motion-reel
+  ~/.agents/skills/ruic-motion-reel
 ```
 
 依赖：`python3`（numpy + Pillow）、`ffmpeg`。字体随包（OFL）。
@@ -56,7 +56,7 @@ Agent 会在你说「用代码做个动效视频 / 生成一条 15 秒作品集�
 
 ```bash
 # 起一支新片
-python3 ~/.agents/skills/RuiC-motion-reel/scripts/new_reel.py ~/my-reel --name my_reel
+python3 ~/.agents/skills/ruic-motion-reel/scripts/new_reel.py ~/my-reel --name my_reel
 
 cd ~/my-reel
 # 改 my_reel/theme.py：品牌、时间网格、色板、文案
