@@ -13,52 +13,12 @@
 | 暗色科技 · 流场 | 丝网印 / riso · 封面 | 3D 建模 · 点云渲染 |
 |---|---|---|
 | ![flow](docs/preview/01-dark-flow.jpg) | ![riso](docs/preview/02-riso-cover.jpg) | ![rack](docs/preview/03-rack-3d.jpg) |
+| **银盐 / 暗房 · SILVER** | **恒星 · KELVIN** | |
+| ![silver](docs/preview/gifs/silver.gif) | ![kelvin](docs/preview/gifs/kelvin.gif) | |
 
 3D 机柜：六台机箱由参数曲面采样成点云，按深度排序散射渲染（近处遮住远处）。
 前面板的通风栅、硬盘位、状态灯不是贴图——是把面板四角做同样的旋转投影后，
 **在那个面的平面里**画出来的，所以透视随旋转正确变化。
-
----
-
-## 两支完整作品
-
-上面三格是引擎的能力切片；下面两支是**完整成片**，每一格都是**动图**：
-
-| 银盐 / 暗房 · SILVER | 恒星 · KELVIN | 你的下一支 |
-|---|---|---|
-| ![silver](docs/preview/gifs/silver.gif) | ![kelvin](docs/preview/gifs/kelvin.gif) | 渲完跑一次 `preview_gif.py`，回车加一格 |
-
-**SILVER · 银盐 / 暗房** —— 中性纸白 + 碳黑 + **一个**安全灯红，没有网点也没有霓虹。
-质感靠**光晕 halation**（暖红环，不是中性 bloom）、**片门微抖**（亚像素）和**两级银盐颗粒**；
-主角是一颗 24 万点的点云环面结，按法线算明暗再映射成**油墨密度**，出来就是铜版刻线。
-六小节＝暗房六道工序（曝光 / 显影 / 骤停 / 定影 / 水洗 / 落片），
-收尾一行字是它的底牌：**NO CAMERA · NO FILM · NO SAMPLES**。
-
-**KELVIN · 一颗被算出来的恒星** —— **片子里没有一个颜色是"挑"的，每一个都是算出来的**。
-底色是 2000 K 的余烬压到 9% 曝光，读数色是 **486.1 nm（Hβ）**，
-日食那一场的绿是 **530.3 nm（Fe XIV 日冕绿线——照片里日冕发绿就是因为这条线）**，
-全部由普朗克定律 → CIE 1931 配色函数 → sRGB 反解，见 `engine/color.py`。
-五小节 80 BPM、**全程无鼓**；日全食那一小节，光被遮住的同一刻**低频也真的消失**。
-
-### 再加一支
-
-```bash
-python3 scripts/new_reel.py <工程目录> --name <包名>
-cd <工程目录> && python3 -m <包名>.build          # 出片
-python3 scripts/preview_gif.py out/<包名>.mp4 docs/preview/gifs/<名字>.gif \
-        --cuts 0.2-0.9,3.7-4.4                    # 单段用 --start/--dur
-```
-
-动图控制在 **2 MB 以内**：它是给人扫一眼的，不是给人下载的。
-`--dither none` 对颗粒满屏的片子既更小又更好看——颗粒本身就是抖动。
-
----
-
-> **默认出口不在这里。** 常规成片默认走本机已有的 Remotion 产线；本引擎是**特殊风格的最后手段**
-> （点云写实 3D / 印刷分色 / 普朗克真彩色 / 合成器配乐）。用它的时候两条硬规矩：
-> **编码走 `h264_nvenc`**（快 3.7 倍、体积小 28%）、**并行度不许吃满全机**。
-> 顺带一句实话：**Remotion 也不是 GPU 渲染**——它的帧同样是 Chrome 在 CPU 上画的，
-> 显卡真正出力的只有编码那一步。见 `references/remotion-default.md`。
 
 ## 它能做什么
 
