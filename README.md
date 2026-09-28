@@ -3,6 +3,9 @@
 **用代码生成 15 秒动态图形（Motion Graphics）成片。** 画面和音乐全部由代码产出——
 不依赖任何外部美术素材，也不打开 After Effects。
 
+同一套引擎换一套视觉语言就是一支新片：暗色科技 HUD、riso 三色印刷、纸艺、银盐暗房、
+恒星普朗克配色、氰版蓝图——下面那张表每一格各是一支，完整成片在 [`docs/films/`](docs/films/)。
+
 > **本 skill 由作者用 DeepSeek Flash 跑通**：从建模、排版、分色到配乐与出片，
 > 整条链路都是它自己跑出来的。
 > **不绑定模型** —— 支持各大主流多模态模型，任何能读写文件、执行命令的编码 Agent 都能用。
@@ -10,11 +13,13 @@
 这是一个 Agent Skill（给 ZCode / Claude Code 这类编码 Agent 用）：装上之后，
 一句「用代码做一条 15 秒动态图形片」就能从零到出片。
 
-| 暗色科技 · 流场 | 丝网印 / riso · 封面 | 纸艺 · DECKLE |
+| 暗色科技 · 流场 | 丝网印 / riso · 封面 | 3D 建模 · 点云渲染 |
 |---|---|---|
-| ![flow](docs/preview/gifs/flow-field.gif) | ![riso](docs/preview/gifs/riso-cover.gif) | ![deckle](docs/preview/gifs/deckle.gif) |
+| ![flow](docs/preview/gifs/flow-field.gif) | ![riso](docs/preview/gifs/riso-cover.gif) | ![rack](docs/preview/gifs/rack-3d.gif) |
 | **银盐 / 暗房 · SILVER** | **恒星 · KELVIN** | **氰版蓝图 · MOTION ENGINE** |
 | ![silver](docs/preview/gifs/silver.gif) | ![kelvin](docs/preview/gifs/kelvin.gif) | ![blueprint](docs/preview/gifs/blueprint.gif) |
+| **纸艺 · DECKLE** | | |
+| ![deckle](docs/preview/gifs/deckle.gif) | | |
 
 3D 机柜：六台机箱由参数曲面采样成点云，按深度排序散射渲染（近处遮住远处）。
 前面板的通风栅、硬盘位、状态灯不是贴图——是把面板四角做同样的旋转投影后，
