@@ -18,25 +18,39 @@
 前面板的通风栅、硬盘位、状态灯不是贴图——是把面板四角做同样的旋转投影后，
 **在那个面的平面里**画出来的，所以透视随旋转正确变化。
 
-分色版套准（印刷管线的核心：三块油墨版各自偏移，再「啪」地归位）：
+---
 
-![registration](docs/preview/05-riso-registration.jpg)
+## 两支完整作品
 
-粒子汇聚标识：5200 个粒子从 logo 的 **alpha 通道**采样目标位置，螺旋入场、落位、
-再交接给清晰的标识——所以拼出来的是**真 logo**，不是近似形状。
+上面三格是引擎的能力切片；下面两支是**完整成片**，每一格都是**动图**：
 
-![assembly](docs/preview/04-particle-assembly.jpg)
+| 银盐 / 暗房 · SILVER | 恒星 · KELVIN | 你的下一支 |
+|---|---|---|
+| ![silver](docs/preview/gifs/silver.gif) | ![kelvin](docs/preview/gifs/kelvin.gif) | 渲完跑一次 `preview_gif.py`，回车加一格 |
 
-### 也可以完全不是这三类
-
-同一套引擎做出来的第四种语言是**银盐印相 / 暗房**：中性纸白 + 碳黑 + 一个安全灯红，
-没有网点也没有霓虹。质感靠**光晕（halation）**、**片门微抖**和**两级银盐颗粒**；
-主角是一颗 24 万点的点云环面结，按法线算明暗再映射成**油墨密度**，出来是铜版刻线。
+**SILVER · 银盐 / 暗房** —— 中性纸白 + 碳黑 + **一个**安全灯红，没有网点也没有霓虹。
+质感靠**光晕 halation**（暖红环，不是中性 bloom）、**片门微抖**（亚像素）和**两级银盐颗粒**；
+主角是一颗 24 万点的点云环面结，按法线算明暗再映射成**油墨密度**，出来就是铜版刻线。
 六小节＝暗房六道工序（曝光 / 显影 / 骤停 / 定影 / 水洗 / 落片），
 收尾一行字是它的底牌：**NO CAMERA · NO FILM · NO SAMPLES**。
 
-![develop](docs/preview/06-silver-develop.jpg)
-![stop](docs/preview/07-silver-stop.jpg)
+**KELVIN · 一颗被算出来的恒星** —— **片子里没有一个颜色是"挑"的，每一个都是算出来的**。
+底色是 2000 K 的余烬压到 9% 曝光，读数色是 **486.1 nm（Hβ）**，
+日食那一场的绿是 **530.3 nm（Fe XIV 日冕绿线——照片里日冕发绿就是因为这条线）**，
+全部由普朗克定律 → CIE 1931 配色函数 → sRGB 反解，见 `engine/color.py`。
+五小节 80 BPM、**全程无鼓**；日全食那一小节，光被遮住的同一刻**低频也真的消失**。
+
+### 再加一支
+
+```bash
+python3 scripts/new_reel.py <工程目录> --name <包名>
+cd <工程目录> && python3 -m <包名>.build          # 出片
+python3 scripts/preview_gif.py out/<包名>.mp4 docs/preview/gifs/<名字>.gif \
+        --cuts 0.2-0.9,3.7-4.4                    # 单段用 --start/--dur
+```
+
+动图控制在 **2 MB 以内**：它是给人扫一眼的，不是给人下载的。
+`--dither none` 对颗粒满屏的片子既更小又更好看——颗粒本身就是抖动。
 
 ---
 
@@ -111,7 +125,7 @@ references/            按需加载的细节文档
   three-d.md           3D 引擎用法与配方
   print-pipeline.md    分色、网点、叠印、版面家具
   audio-dsp.md         配乐合成
-  gotchas.md           踩过的坑（近 30 条，症状与真因）
+  gotchas.md           踩过的坑（近 40 条，症状与真因）
   performance.md       一帧花在哪、换显卡能省多少（实测）
 assets/fonts/          随包字体（OFL 1.1，见 NOTICE.md）
 ```

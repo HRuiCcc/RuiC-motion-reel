@@ -19,7 +19,7 @@ metadata:
 > **不绑定模型**：纯 Python + ffmpeg，不含任何模型专属依赖，
 > 支持各大主流多模态模型——任何能读写文件、执行命令的编码 Agent 都能用。
 
-已经用它做过四类视觉语言：
+已经用它做过五类视觉语言：
 
 | 语言 | 观感 | 关键手法 |
 |---|---|---|
@@ -27,6 +27,7 @@ metadata:
 | **丝网印 / riso** | 暖米纸张 + 荧光三色油墨、网点、套印 | multiply 叠印、半调网点、套印偏移、纸纹 |
 | **品牌暗色产品片** | 品牌色暗色主题 + 真实产品 UI + 3D 硬件 | 品牌色板映射、真 3D 建模、产品界面复刻 |
 | **暗房 / 银盐** | 中性纸白 + 碳黑 + 一个安全灯红，无网点无霓虹 | 光晕 halation、片门微抖、两级银盐颗粒、点云刻线 |
+| **恒星 / 普朗克真彩色** | 深棕余烬底 + 黑体色温条 + 光谱线，没有一个是挑的 | 普朗克→CIE 1931→sRGB 反解颜色、点云磁流管、真谱线 |
 
 > ## ⚠️ 默认出口不在这里（2026-09-28 用户定调）
 >
@@ -43,6 +44,8 @@ metadata:
 ## DSH 运行约定
 
 - `{skill_dir}` 是本 `SKILL.md` 所在目录。引擎、模板、字体、参考文档都在其下，用绝对路径定位。
+- 文中命令都写 `python3`。**在 Windows 上换成 `py -3`**——`python3` 很可能是应用商店的
+  别名桩，非交互下静默退出（exit 49，什么都不吐），会被误判成脚本有问题。
 - **产出写进用户指定的项目目录**，不改 `{skill_dir}` 内的模板真源；需要模板时先复制。
 - 渲染是 CPU 密集的长任务（15 秒 ≈ 1~3 分钟多进程），开工前说清目标目录与预计耗时。
 - 成片审核由用户做：渲完把文件路径直接给用户。
@@ -160,6 +163,7 @@ print('mean', bg.mean(0).round(1), 'median', np.median(bg,0), 'p95', np.percenti
 | 类型排版、字号标定、HUD 版式 | `references/design-grammar.md` | `engine/fonts.py`, `engine/core.py` |
 | 真 3D（建模、点云渲染、隐藏线） | `references/three-d.md` | `engine/three.py` |
 | 印刷/riso 分色、叠印、纸纹 | `references/print-pipeline.md` | `engine/core.py` |
+| 颜色按物理量反解（色温 / 谱线） | `references/design-grammar.md` | `engine/color.py` |
 | 配乐合成（打击乐/贝斯/铺底/旋律） | `references/audio-dsp.md` | `engine/dsp.py` |
 | 出片前自检、已知 bug | `references/gotchas.md` | — |
 | 渲染太慢 / 要不要上 GPU | `references/performance.md` | `scripts/perf_probe.py` |
@@ -211,7 +215,8 @@ ffmpeg -hide_banner -i out/<name>.mp4 -af loudnorm=print_format=summary -f null 
 │   ├── three.py       3D：参数曲面 / 相机 / 点云排序散射渲染 / 隐藏线
 │   ├── fonts.py       字体栈 + 字距排版 + 基线换算（含 getbbox 的 ascent 坑）
 │   ├── anim.py        缓动、错帧、值噪声
-│   └── dsp.py         合成器 DSP：FFT 时变滤波、磁带抖晃、混响、频谱分析
+│   ├── dsp.py         合成器 DSP：FFT 时变滤波、磁带抖晃、混响、频谱分析
+│   └── color.py       颜色按物理量反解：普朗克 / CIE 1931 / 谱线 / 色域拟合
 ├── template/          可跑的最小工程（8 场景骨架 + 一段配乐）
 ├── scripts/new_reel.py  从模板起一支新片
 ├── references/        设计语法 / 3D / 印刷 / 音频 / 坑 / 性能 / 默认路线
