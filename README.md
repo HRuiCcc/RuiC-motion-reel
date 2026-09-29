@@ -4,7 +4,8 @@
 不依赖任何外部美术素材，也不打开 After Effects。
 
 同一套引擎换一套视觉语言就是一支新片：暗色科技 HUD、riso 三色印刷、纸艺、银盐暗房、
-恒星普朗克配色、氰版蓝图——下面那张表每一格各是一支，完整成片在 [`docs/films/`](docs/films/)。
+恒星普朗克配色、氰版蓝图、紫外光刻——下面那张表每一格各是一支，
+完整成片在 [`docs/films/`](docs/films/)。
 
 > **本 skill 由作者用 DeepSeek Flash 跑通**：从建模、排版、分色到配乐与出片，
 > 整条链路都是它自己跑出来的。
@@ -18,8 +19,8 @@
 | ![flow](docs/preview/gifs/flow-field.gif) | ![riso](docs/preview/gifs/riso-cover.gif) | ![rack](docs/preview/gifs/rack-3d.gif) |
 | **银盐 / 暗房 · SILVER** | **恒星 · KELVIN** | **氰版蓝图 · MOTION ENGINE** |
 | ![silver](docs/preview/gifs/silver.gif) | ![kelvin](docs/preview/gifs/kelvin.gif) | ![blueprint](docs/preview/gifs/blueprint.gif) |
-| **纸艺 · DECKLE** | | |
-| ![deckle](docs/preview/gifs/deckle.gif) | | |
+| **纸艺 · DECKLE** | **紫外光刻 · LITHO** | |
+| ![deckle](docs/preview/gifs/deckle.gif) | ![litho](docs/preview/gifs/litho.gif) | |
 
 
 ## 它能做什么
@@ -32,7 +33,10 @@
   套印偏移、纸纹、裁切线、套准规
 - **配乐合成**：打击乐 / 贝斯 / FM 电钢 / 钟 / 铺底 / riser / impact，
   加磁带抖晃与混响，无采样
-- **14 张风格牌，默认随机抽**：暗色霓虹只是其中一张，抽到编辑排版、手绘速写、
+- **颜色也能是被算出来的**：给一个物理量就直接得到颜色——黑体温度
+  （Planck → CIE 1931 → sRGB）、谱线波长、薄膜干涉（氧化层厚度 → 反射光谱）。
+  LITHO 里曝光光是 405 nm 反解的那支紫，晶圆彩虹是 SiO₂ 厚度 20–780 nm 积分出来的
+- **15 张风格牌，默认随机抽**：暗色霓虹只是其中一张，抽到编辑排版、手绘速写、
   纸艺、标本图录、柔光渐变就照做——**轻的做干净了一样好看**。抽签结果写进项目的 `STYLE.md`
 - **出片链**：多进程逐场并行渲染 → H.264 编码 → 混音，1080p60 的 15 秒约 4~8 分钟
 
@@ -84,7 +88,11 @@ engine/                共享渲染引擎
   anim.py              缓动、错帧、值噪声
   dsp.py               合成器 DSP：FFT 时变滤波、磁带抖晃、混响、频谱分析
 template/              可跑的最小工程（8 个场景 + 一段配乐）
-scripts/new_reel.py    从模板起一支新片
+scripts/
+  new_reel.py          从模板起一支新片（默认抽一张风格牌，写进项目 STYLE.md）
+  style_lottery.py     15 张视觉语言的牌堆，抽签 / 列牌 / --avoid 上一张
+  preview_gif.py       成片或帧序列 → README 用的循环预览 GIF
+  perf_probe.py        逐算子 CPU vs CuPy，看换显卡到底能省多少
 references/            按需加载的细节文档
   design-grammar.md    设计语法：时间网格、排版、构图、动效、亮度校准
   three-d.md           3D 引擎用法与配方
