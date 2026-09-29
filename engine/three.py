@@ -227,7 +227,7 @@ class Camera:
     """Pinhole camera. View space looks down +z from the eye."""
 
     def __init__(self, eye=(0, 0, 4), target=(0, 0, 0), up=(0, 1, 0),
-                 fov=34.0, w=1280, h=720, shift=(0.0, 0.0)):
+                 fov=34.0, w=1920, h=1080, shift=(0.0, 0.0)):
         eye = np.asarray(eye, np.float32)
         self.eye = eye
         fwd = norm(np.asarray(target, np.float32) - eye)

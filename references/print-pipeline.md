@@ -63,7 +63,9 @@ for centre, width, angle, ink in TONES:
 halftone(field, cell=6.0, angle=15.0, soft=0.5)
 ```
 在**旋转过的点阵**上算到最近网点的距离，再用 field 控制点面积（`sqrt(field)` 保面积线性）。
-`cell` 就是网线密度：1280px 宽 ≈ 133 lpi 对应 `cell≈6`。
+`cell` 就是网线密度：1280px 宽 ≈ 133 lpi 对应 `cell≈6`；
+交付 1920px 宽要保持同样的网线，`cell≈9`。
+**网点是细节，靠它吃饭的片子要按交付尺寸排版**（`W, H = OUT_W, OUT_H`，见 SKILL.md 的「交付规格」），否则 1080p 的网点来自 720p 重采样，会糊。
 
 `soft` 是抗锯齿宽度，0.4 太硬（点发方），0.6 太糊（丢网点感），**0.48~0.52 最像**。
 

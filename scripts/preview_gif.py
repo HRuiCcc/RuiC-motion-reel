@@ -40,6 +40,21 @@ def parse_cuts(s):
     return out
 
 
+def probe_fps(path, fallback=60.0):
+    """Frame rate of the source. Reels ship at 60, but never assume it."""
+    p = subprocess.run(
+        ["ffprobe", "-v", "error", "-select_streams", "v:0",
+         "-show_entries", "stream=r_frame_rate", "-of", "csv=p=0", path],
+        capture_output=True, text=True)
+    if p.returncode != 0:
+        return fallback
+    num, _, den = p.stdout.strip().partition("/")
+    try:
+        return float(num) / float(den or 1) or fallback
+    except ValueError:
+        return fallback
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("src", help="an mp4, or a directory of f%%04d.png")
@@ -50,6 +65,9 @@ def main():
                     help="splice several spans, e.g. 0.3-1.1,4.4-5.2")
     ap.add_argument("--w", type=int, default=640)
     ap.add_argument("--fps", type=int, default=14)
+    ap.add_argument("--in-fps", type=float, default=60.0,
+                    help="frame rate of a PNG-sequence source; an mp4 is probed "
+                         "instead. Delivery is 60 fps, the reel's own FPS wins")
     ap.add_argument("--colors", type=int, default=224)
     ap.add_argument("--dither", default="sierra2_4a",
                     help="sierra2_4a | bayer:bayer_scale=N | none. Grainy footage "
@@ -58,11 +76,11 @@ def main():
 
     is_dir = os.path.isdir(args.src)
     if is_dir:
-        src = ["-framerate", "30", "-i", os.path.join(args.src, "f%04d.png")]
-        fps_in = 30.0
+        fps_in = float(args.in_fps)
+        src = ["-framerate", "%g" % fps_in, "-i", os.path.join(args.src, "f%04d.png")]
     else:
+        fps_in = probe_fps(args.src, args.in_fps)
         src = ["-i", args.src]
-        fps_in = 30.0
 
     if args.cuts:
         cuts = parse_cuts(args.cuts)

@@ -23,16 +23,25 @@ TAGLINE = "MADE WITH CODE"
 # 15.000 s exactly. One scene per bar, every cut lands on a downbeat.
 #   seconds = bars * 4 * 60 / BPM      BPM = 240 * bars / seconds
 #   8 bars -> 128 BPM | 6 bars -> 96 | 5 bars -> 80 | 4 bars -> 64
-FPS = 30
+# 60 fps: 900 frames. At 60 the easing is what carries a cut — a 6-frame
+# settle is 0.1 s now, so entrances want to be a beat long, not a third of one.
+FPS = 60
 BPM = 128
 BEAT = 60.0 / BPM          # 0.46875 s
 BAR = BEAT * 4             # 1.875 s
 BARS = 8
 DUR = BAR * BARS           # 15.000 s
-NFRAMES = int(round(DUR * FPS))   # 450
+NFRAMES = int(round(DUR * FPS))   # 900
 
-OUT_W, OUT_H = 1280, 720
-W, H = OUT_W, OUT_H
+# Layout is authored in W/H; OUT_W/OUT_H is the file that comes out. Delivery
+# is 1920x1080 at 60 fps. Keeping the authoring space at 720p is what makes
+# that cheap to lay out: type, rules and everything vector is rendered at the
+# delivery size regardless, so only the soft masks (glow, grain, paper tooth)
+# are built at the authoring size and resampled once. A film that leans on
+# fine print texture — halftone dots, stipple — should instead author at the
+# delivery size by setting W, H = OUT_W, OUT_H, so those masks are born sharp.
+OUT_W, OUT_H = 1920, 1080
+W, H = 1280, 720
 
 # --- palette ----------------------------------------------------------------
 # Every colour should trace to a measured brand value, never to taste. See

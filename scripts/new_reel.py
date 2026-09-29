@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Start a new reel from the template.
 
-    python3 new_reel.py <project_dir> [--name pkg] [--force]
+    python3 new_reel.py <project_dir> [--name pkg] [--style random|none|<id>] [--force]
 
 Creates a self-contained project:
 
@@ -11,16 +11,23 @@ Creates a self-contained project:
       <pkg>/             theme.py scenes.py chrome.py audio.py build.py
       mg/                shared engine
       out/               renders land here
+      STYLE.md           the drawn style card (`--style none` to skip)
 
 `--name` defaults to a sanitised form of the project directory name.
+`--style` draws from the deck by default: the engine defaults to its loudest
+look, and a draw keeps a run of films from all being that one film.
 """
 from __future__ import annotations
 
 import argparse
 import os
+import random
 import re
 import shutil
 import sys
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from style_lottery import CARDS, card_markdown, draw   # noqa: E402
 
 SKILL = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
@@ -46,6 +53,8 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("dest")
     ap.add_argument("--name", default=None)
+    ap.add_argument("--style", default="random",
+                    help="style card id, 'random' (default draw), or 'none'")
     ap.add_argument("--force", action="store_true",
                     help="write into an existing non-empty directory")
     a = ap.parse_args()
@@ -82,8 +91,24 @@ def main():
     if not os.path.exists(mark):
         placeholder_mark(mark)
 
+    style = None
+    if a.style != "none":
+        if a.style == "random":
+            style = draw(random.Random())
+        else:
+            style = next((c for c in CARDS if c["id"] == a.style), None)
+            if style is None:
+                sys.exit("unknown style card %r — see style_lottery.py --list" % a.style)
+        with open(os.path.join(dest, "STYLE.md"), "w") as fh:
+            fh.write(card_markdown(style))
+
     print("created", dest)
     print("  package     ", pkg)
+    if style is not None:
+        print("  style       ", style["id"], "—", style["name"])
+        print("                ", style["idiom"])
+        if style.get("author_at_delivery"):
+            print("                this card wants W, H = OUT_W, OUT_H in theme.py")
     print("  edit        ", os.path.join(pkg, "theme.py"), "(identity, palette, copy)")
     print("  then        ", os.path.join(pkg, "scenes.py"))
     print("  swap logo   ", "assets/mark.png")

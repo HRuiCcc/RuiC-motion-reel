@@ -43,7 +43,7 @@ def render_one(i, ss=2):
     for f in range(f0, f1):
         t = f / T.FPS
         tl = t - i * T.BAR
-        c = Canvas(T.W, T.H, ss=ss)
+        c = Canvas(T.W, T.H, ss=ss, out=(T.OUT_W, T.OUT_H))
         obj.render(c, tl, t)
         p = c.pass_()
         chrome.draw(p, t, i, chrome.POST[i].get("light", False))
@@ -56,7 +56,7 @@ def render_one(i, ss=2):
 def render_at(i, tl, ss=2, name=None):
     obj = scene_objects()[i]
     t = i * T.BAR + tl
-    c = Canvas(T.W, T.H, ss=ss)
+    c = Canvas(T.W, T.H, ss=ss, out=(T.OUT_W, T.OUT_H))
     obj.render(c, tl, t)
     p = c.pass_()
     chrome.draw(p, t, i, chrome.POST[i].get("light", False))
@@ -74,7 +74,7 @@ def render_still(i, tl_list, ss=2, tag=""):
     rows = []
     for k, tl in enumerate(tl_list):
         t = i * T.BAR + tl
-        c = Canvas(T.W, T.H, ss=ss)
+        c = Canvas(T.W, T.H, ss=ss, out=(T.OUT_W, T.OUT_H))
         scene_objects()[i].render(c, tl, t)
         p = c.pass_()
         chrome.draw(p, t, i, chrome.POST[i].get("light", False))
@@ -98,7 +98,7 @@ def build_audio():
     os.makedirs(OUT, exist_ok=True)
     st, sr = A.build()
     A.write_wav(os.path.join(OUT, "track.wav"), st, sr)
-    wave, spec = A.analyse(st, sr)
+    wave, spec = A.analyse(st, sr, fps=T.FPS)
     np.save(os.path.join(OUT, "wave.npy"), wave)
     np.save(os.path.join(OUT, "spec.npy"), spec)
     return os.path.join(OUT, "track.wav")
@@ -115,6 +115,22 @@ X264 = ["-c:v", "libx264", "-preset", "slow", "-crf", "16",
         "-pix_fmt", "yuv420p"]
 
 
+def _has_nvenc():
+    """Ask ffmpeg what it was built with, instead of trying and reading stderr.
+
+    Handing nvenc's own options to a build without that encoder makes ffmpeg
+    die on `Unrecognized option 'rc'` — which reads like the render is broken.
+    On a machine with no NVIDIA card that noise shows up on every render, and
+    it cost a real debugging session before it was understood.
+    """
+    try:
+        out = subprocess.run(["ffmpeg", "-hide_banner", "-encoders"],
+                             capture_output=True, text=True).stdout
+    except OSError:
+        return False
+    return "h264_nvenc" in out
+
+
 def _encode_frames(dst, enc):
     return subprocess.run([
         "ffmpeg", "-y", "-v", "error", "-framerate", str(T.FPS),
@@ -125,10 +141,13 @@ def _encode_frames(dst, enc):
 
 def encode(name="reel"):
     silent = os.path.join(OUT, f"{name}_silent.mp4")
-    if _encode_frames(silent, NVENC) != 0:
-        print("  nvenc unavailable, falling back to libx264")
-        if _encode_frames(silent, X264) != 0:
-            raise SystemExit("neither h264_nvenc nor libx264 could encode")
+    for e, enc in enumerate([NVENC, X264] if _has_nvenc() else [X264]):
+        if _encode_frames(silent, enc) == 0:
+            break
+        if e == 0:
+            print("  nvenc present but failed, falling back to libx264")
+    else:
+        raise SystemExit("neither h264_nvenc nor libx264 could encode")
     final = os.path.join(OUT, f"{name}.mp4")
     wav = os.path.join(OUT, "track.wav")
     if os.path.exists(wav):

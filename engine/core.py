@@ -37,6 +37,39 @@ def down2(a):
     return a.reshape(h // 2, 2, w // 2, 2, *a.shape[2:]).mean(axis=(1, 3))
 
 
+_RESAMPLE = {}
+
+
+def resize(a, w, h):
+    """Separable linear resample, any trailing channel count.
+
+    Used when a scene composes a mask at the authoring size and the plate is
+    rendered larger. Index maps are cached per (shape in, shape out): the same
+    handful of mask shapes come round every frame.
+    """
+    a = np.asarray(a, np.float32)
+    sh, sw = a.shape[0], a.shape[1]
+    if (sh, sw) == (h, w):
+        return a
+    maps = _RESAMPLE.get((sh, sw, h, w))
+    if maps is None:
+        yi = np.clip((np.arange(h) + 0.5) * (sh / float(h)) - 0.5, 0, sh - 1)
+        xi = np.clip((np.arange(w) + 0.5) * (sw / float(w)) - 0.5, 0, sw - 1)
+        y0 = np.floor(yi).astype(np.int32)
+        x0 = np.floor(xi).astype(np.int32)
+        maps = (y0, np.minimum(y0 + 1, sh - 1), x0, np.minimum(x0 + 1, sw - 1),
+                (yi - y0).astype(np.float32), (xi - x0).astype(np.float32))
+        _RESAMPLE[(sh, sw, h, w)] = maps
+    y0, y1, x0, x1, wy, wx = maps
+    b = a if a.ndim == 3 else a[..., None]
+    wx = wx.reshape(1, -1, 1)
+    wy = wy.reshape(-1, 1, 1)
+    top = b[y0][:, x0] * (1.0 - wx) + b[y0][:, x1] * wx
+    bot = b[y1][:, x0] * (1.0 - wx) + b[y1][:, x1] * wx
+    out = top * (1.0 - wy) + bot * wy
+    return out if a.ndim == 3 else out[..., 0]
+
+
 def _box1d(a, r, axis):
     if r < 1:
         return a
@@ -196,12 +229,116 @@ def vgrad(h, top, bot):
 # --------------------------------------------------------------------------
 # Canvas
 # --------------------------------------------------------------------------
+class _PlateView:
+    """Shim over a plate buffer that accepts authoring-size arrays.
+
+    `c.add += mask` is how a scene lays light on the plate, and that mask is
+    built in authoring units. The view resamples anything carrying the whole
+    authoring footprint and passes everything else — flat colours, scalars,
+    arrays that are already on the delivery grid — straight through.
+    """
+
+    __slots__ = ("_c", "_name")
+
+    def __init__(self, canvas, name):
+        object.__setattr__(self, "_c", canvas)
+        object.__setattr__(self, "_name", name)
+
+    @property
+    def _buf(self):
+        return getattr(object.__getattribute__(self, "_c"),
+                       object.__getattribute__(self, "_name"))
+
+    def _in(self, v):
+        c = object.__getattribute__(self, "_c")
+        a = np.asarray(v, np.float32)
+        if a.ndim >= 2 and a.shape[:2] == (c.h, c.w) and (c.h, c.w) != (c.oh, c.ow):
+            a = resize(a, c.ow, c.oh)
+        return a
+
+    # numpy protocol: sessions read buffers back (c.rgb.mean(...), np.clip(...))
+    def __array__(self, dtype=None):
+        return np.asarray(self._buf, dtype)
+
+    def __getattr__(self, name):
+        return getattr(self._buf, name)
+
+    def __getitem__(self, key):
+        return self._buf[key]
+
+    def __setitem__(self, key, v):
+        self._buf[key] = self._in(v)
+
+    def __iadd__(self, v):
+        buf = self._buf
+        buf += self._in(v)
+        return self
+
+    def __isub__(self, v):
+        buf = self._buf
+        buf -= self._in(v)
+        return self
+
+    def __imul__(self, v):
+        buf = self._buf
+        buf *= self._in(v)
+        return self
+
+    def __itruediv__(self, v):
+        buf = self._buf
+        buf /= self._in(v)
+        return self
+
+    def __add__(self, v):
+        return self._buf + self._in(v)
+
+    def __sub__(self, v):
+        return self._buf - self._in(v)
+
+    def __mul__(self, v):
+        return self._buf * self._in(v)
+
+    def __truediv__(self, v):
+        return self._buf / self._in(v)
+
+    def __radd__(self, v):
+        return self._in(v) + self._buf
+
+    def __rsub__(self, v):
+        return self._in(v) - self._buf
+
+    def __rmul__(self, v):
+        return self._in(v) * self._buf
+
+
 class Canvas:
-    def __init__(self, w, h, ss=2):
+    """A plate rendered at the delivery size, laid out in the authoring size.
+
+    `w, h` is the space the scenes draw in — every layout constant, type size
+    and mask radius in a theme is expressed in it. `out` is the size of the
+    file that comes out. When they differ the vector pass is supersampled at
+    the delivery size (so type and rules are rendered at delivery resolution,
+    not scaled up afterwards) and the soft masks a scene composes at the
+    authoring size are resampled once on the way in. Nothing sharp travels
+    that second path: grain, glow, paper tooth and vignette carry no detail
+    finer than the resample, which is the point.
+
+    Leave `out` unset and the plate is exactly the authoring size, which is
+    what a film authored directly at its delivery size wants.
+    """
+
+    def __init__(self, w, h, ss=2, out=None):
         self.w, self.h, self.ss = w, h, ss
-        self.sw, self.sh = w * ss, h * ss
-        self.rgb = np.zeros((h, w, 3), np.float32)
-        self.add = np.zeros((h, w, 3), np.float32)
+        self.ow, self.oh = (int(out[0]), int(out[1])) if out else (w, h)
+        # authoring unit -> delivery pixel
+        self.k = self.oh / float(h)
+        # the pass carries the delivery scale, so its ss already lands on the
+        # output grid: 1280x720 authored, 1920x1080 delivered, ss=2 -> ss=3
+        self.ss_eff = ss * self.k
+        self.sw = int(round(w * self.ss_eff))
+        self.sh = int(round(h * self.ss_eff))
+        self._rgb = np.zeros((self.oh, self.ow, 3), np.float32)
+        self._add = np.zeros((self.oh, self.ow, 3), np.float32)
         self._pass = None
         # a scene can override the per-scene finishing for individual beats
         # (the white CUT frame must not bloom its own dark type away)
@@ -212,54 +349,91 @@ class Canvas:
         self.soften = 0.0         # px of ink-edge softening (absorption)
         self.misreg = (0.0, 0.0)  # plate offset in px
 
-    # -- plate ------------------------------------------------------------
+    # -- plate buffers -----------------------------------------------------
+    # Scenes compose masks with plain numpy and add them straight onto the
+    # plate (`c.add += gauss(...)`). Handing out a small view instead of the
+    # array itself is what lets those stay in authoring units: anything with
+    # the authoring footprint is resampled to the delivery grid on the way in.
+    @property
+    def rgb(self):
+        return _PlateView(self, "_rgb")
+
+    @rgb.setter
+    def rgb(self, v):
+        self._assign(self._rgb, v)
+
+    @property
+    def add(self):
+        return _PlateView(self, "_add")
+
+    @add.setter
+    def add(self, v):
+        self._assign(self._add, v)
+
+    def _assign(self, buf, v):
+        if isinstance(v, _PlateView):
+            return                      # `c.add += x` already applied in place
+        a = np.asarray(v, np.float32)
+        if a.ndim >= 2 and a.shape[:2] == (self.h, self.w) and (self.h, self.w) != (self.oh, self.ow):
+            a = resize(a, self.ow, self.oh)
+        buf[...] = a
+
+    def _fit(self, a):
+        """Bring an authoring-size array onto the delivery grid."""
+        a = np.asarray(a, np.float32)
+        if a.ndim >= 2 and a.shape[:2] != (self.oh, self.ow) and a.shape[:2] != (1, 1):
+            a = resize(a, self.ow, self.oh)
+        return a
+
     def clear(self, color):
-        self.rgb[:] = rgb01(color).reshape(1, 1, 3)
-        self.add[:] = 0.0
+        self._rgb[...] = rgb01(color).reshape(1, 1, 3)
+        self._add[...] = 0.0
 
     def fade(self, k):
-        self.rgb *= k
+        self._rgb *= k
 
     def light(self, arr, k=1.0):
-        self.add += arr * k
+        self._add += self._fit(arr) * k
 
     def composite(self, lrgb, la, mode="normal"):
-        la = np.clip(la, 0.0, 1.0)
+        lrgb, la = self._fit(lrgb), np.clip(self._fit(la), 0.0, 1.0)
+        rgb, add = self._rgb, self._add
         if mode == "normal":
-            self.rgb = self.rgb * (1.0 - la) + lrgb * la
+            self._rgb = rgb * (1.0 - la) + lrgb * la
         elif mode == "add":
-            self.add += lrgb * la
+            add += lrgb * la
         elif mode == "screen":
-            self.rgb = clip01(1.0 - (1.0 - self.rgb) * (1.0 - np.clip(lrgb * la, 0, 1)))
+            self._rgb = clip01(1.0 - (1.0 - rgb) * (1.0 - np.clip(lrgb * la, 0, 1)))
         elif mode == "multiply":
             # Translucent ink over ink. This is what makes an overprint read as
             # a new colour (pink over blue becomes purple) instead of as stacking.
-            self.rgb = self.rgb * (1.0 - la * (1.0 - lrgb))
+            self._rgb = rgb * (1.0 - la * (1.0 - lrgb))
         elif mode == "replace":
-            self.rgb = self.rgb * (1.0 - la) + lrgb
+            self._rgb = rgb * (1.0 - la) + lrgb
 
     def _ink_treat(self, la, coverage=None, soften=None, misreg=None):
         cov = self.coverage if coverage is None else coverage
         if cov is not None:
-            la = la * cov
-        s = self.soften if soften is None else soften
+            la = la * self._fit(cov)
+        s = (self.soften if soften is None else soften) * self.k
         if s > 0:
             la = blur(la, max(1, int(round(s))), 1)
         m = self.misreg if misreg is None else misreg
         if m and (m[0] or m[1]):
-            la = shift2(la, m)
+            la = shift2(la, (m[0] * self.k, m[1] * self.k))
         return la
 
     def stamp(self, mask, color, mode="multiply", alpha=1.0, coverage=None,
               soften=None, misreg=None):
         """Deposit flat ink through a numpy coverage mask."""
-        la = np.clip(np.asarray(mask, np.float32), 0.0, 1.0)
+        la = np.clip(self._fit(mask), 0.0, 1.0)
         if la.ndim == 2:
             la = la[..., None]
         la = la * alpha
         la = self._ink_treat(la, coverage, soften, misreg)
-        lrgb = np.broadcast_to(rgb01(color).reshape(1, 1, 3), (self.h, self.w, 3))
+        lrgb = np.broadcast_to(rgb01(color).reshape(1, 1, 3), (self.oh, self.ow, 3))
         self.composite(lrgb, la, mode)
+
 
     # -- bitmap -----------------------------------------------------------
     def blit(self, img, cx, cy, scale=1.0, alpha=1.0, tint=None,
@@ -269,6 +443,8 @@ class Canvas:
         `tint` replaces the bitmap's colour with a flat one, keeping its alpha —
         the usual way a single-colour mark is placed on a coloured plate.
         """
+        k = self.k
+        cx, cy, scale = cx * k, cy * k, scale * k
         im = _load_bitmap(img)
         if rotate:
             im = im.rotate(rotate, resample=Image.BICUBIC, expand=True)
@@ -281,24 +457,25 @@ class Canvas:
         x0, y0 = int(round(cx - w / 2.0)), int(round(cy - h / 2.0))
         sx0, sy0 = max(0, -x0), max(0, -y0)
         dx0, dy0 = max(0, x0), max(0, y0)
-        cw = min(w - sx0, self.w - dx0)
-        ch = min(h - sy0, self.h - dy0)
+        cw = min(w - sx0, self.ow - dx0)
+        ch = min(h - sy0, self.oh - dy0)
         if cw <= 0 or ch <= 0:
             return
         sub = arr[sy0:sy0 + ch, sx0:sx0 + cw, :3]
         suba = la[sy0:sy0 + ch, sx0:sx0 + cw]
         if glow > 0 and mode == "add":
-            self.add[dy0:dy0 + ch, dx0:dx0 + cw] += sub * suba * glow
+            self._add[dy0:dy0 + ch, dx0:dx0 + cw] += sub * suba * glow
         region = (slice(dy0, dy0 + ch), slice(dx0, dx0 + cw))
         if mode == "add":
-            self.add[region] += sub * suba * (1.0 if glow <= 0 else 1.0)
+            self._add[region] += sub * suba * (1.0 if glow <= 0 else 1.0)
         else:
-            cur = self.rgb[region]
-            self.rgb[region] = cur * (1.0 - suba) + sub * suba
+            cur = self._rgb[region]
+            self._rgb[region] = cur * (1.0 - suba) + sub * suba
+
 
     # -- vector pass ------------------------------------------------------
     def pass_(self):
-        self._pass = _Pass(self.sw, self.sh, self.ss)
+        self._pass = _Pass(self.sw, self.sh, self.ss_eff)
         return self._pass
 
     def commit(self, mode="normal", coverage=None, soften=None, misreg=None):
@@ -306,8 +483,11 @@ class Canvas:
         if p is None:
             return
         arr = np.asarray(p.layer, np.float32) / 255.0
-        if self.ss > 1:
+        if self.ss_eff == 2.0:
             lrgb, la = down2(arr[..., :3]), down2(arr[..., 3:4])
+        elif self.ss_eff > 1.0:
+            lrgb = resize(arr[..., :3], self.ow, self.oh)
+            la = resize(arr[..., 3:4], self.ow, self.oh)
         else:
             lrgb, la = arr[..., :3], arr[..., 3:4]
         lrgb = np.clip(lrgb, 0.0, 1.0)
@@ -319,54 +499,60 @@ class Canvas:
 
     # -- effects ----------------------------------------------------------
     def glow(self, color, cx, cy, rx, ry=None, power=2.4, gain=1.0):
-        f = radial(self.w, self.h, cx, cy, rx, ry, power)[..., None]
-        self.add += f * rgb01(color).reshape(1, 1, 3) * gain
+        k = self.k
+        f = radial(self.ow, self.oh, cx * k, cy * k,
+                   rx * k, None if ry is None else ry * k, power)[..., None]
+        self._add += f * rgb01(color).reshape(1, 1, 3) * gain
+
 
     def bloom(self, thr=0.68, knee=0.26, octaves=((2, 4, 0.30), (4, 6, 0.20), (8, 5, 0.11))):
-        src = clip01(self.rgb + self.add)
+        src = clip01(self._rgb + self._add)
         lum = src.max(axis=2, keepdims=True)
         bright = src * clip01((lum - thr) / max(1e-5, knee))
         out = np.zeros_like(src)
         for fac, rad, amt in octaves:
             small = bright[::fac, ::fac]
             up = np.repeat(np.repeat(blur(small, rad, 3), fac, axis=0), fac, axis=1)
-            out += up[: self.h, : self.w] * amt
-        self.add += out
+            out += up[: self.oh, : self.ow] * amt
+        self._add += out
 
     def chroma(self, px=1.6):
         if px <= 0:
             return
-        img = clip01(self.rgb + self.add)
-        yy, xx = np.mgrid[0 : self.h, 0 : self.w]
-        dx = (xx - self.w / 2) / (self.w / 2)
-        dy = (yy - self.h / 2) / (self.h / 2)
-        sx = np.clip(np.round(xx + dx * px).astype(int), 0, self.w - 1)
-        sy = np.clip(np.round(yy + dy * px).astype(int), 0, self.h - 1)
-        bx = np.clip(np.round(xx - dx * px).astype(int), 0, self.w - 1)
-        by = np.clip(np.round(yy - dy * px).astype(int), 0, self.h - 1)
+        px = px * self.k          # authored in authoring units
+        img = clip01(self._rgb + self._add)
+        yy, xx = np.mgrid[0 : self.oh, 0 : self.ow]
+        dx = (xx - self.ow / 2) / (self.ow / 2)
+        dy = (yy - self.oh / 2) / (self.oh / 2)
+        sx = np.clip(np.round(xx + dx * px).astype(int), 0, self.ow - 1)
+        sy = np.clip(np.round(yy + dy * px).astype(int), 0, self.oh - 1)
+        bx = np.clip(np.round(xx - dx * px).astype(int), 0, self.ow - 1)
+        by = np.clip(np.round(yy - dy * px).astype(int), 0, self.oh - 1)
         out = np.stack([img[sy, sx, 0], img[yy, xx, 1], img[by, bx, 2]], -1)
-        self.add *= 0.0
-        self.rgb = out
+        self._add *= 0.0
+        self._rgb = out
 
     def vignette(self, amount=0.55, power=1.6):
-        f = radial(self.w, self.h, self.w / 2, self.h / 2, self.w * 0.74, self.h * 0.90, power)
-        self.rgb *= (1.0 - amount) + amount * f[..., None]
+        f = radial(self.ow, self.oh, self.ow / 2, self.oh / 2,
+                   self.ow * 0.74, self.oh * 0.90, power)
+        self._rgb *= (1.0 - amount) + amount * f[..., None]
 
     def scanlines(self, amount=0.018, period=3):
-        y = np.arange(self.h, dtype=np.float32)[:, None, None]
-        self.rgb *= 1.0 - amount * (1.0 + np.cos(2 * np.pi * y / period)) * 0.5
+        period = period * self.k   # authored in authoring units
+        y = np.arange(self.oh, dtype=np.float32)[:, None, None]
+        self._rgb *= 1.0 - amount * (1.0 + np.cos(2 * np.pi * y / period)) * 0.5
 
     def grain(self, amount=0.030, rng=None):
         rng = rng or np.random.default_rng()
-        n = rng.normal(0, 1, (self.h, self.w, 1)).astype(np.float32)
-        self.rgb = clip01(self.rgb + n * amount * (0.30 + 0.70 * (1.0 - self.rgb)))
+        n = rng.normal(0, 1, (self.oh, self.ow, 1)).astype(np.float32)
+        self._rgb = clip01(self._rgb + n * amount * (0.30 + 0.70 * (1.0 - self._rgb)))
 
     def grade(self, lift=(0.004, 0.008, 0.018), gain=(1.0, 1.0, 1.03), sat=1.06):
-        self.rgb = self.rgb * np.asarray(gain, np.float32).reshape(1, 1, 3) + np.asarray(
+        self._rgb = self._rgb * np.asarray(gain, np.float32).reshape(1, 1, 3) + np.asarray(
             lift, np.float32
         ).reshape(1, 1, 3)
-        l = self.rgb.mean(axis=2, keepdims=True)
-        self.rgb = clip01(l + (self.rgb - l) * sat)
+        l = self._rgb.mean(axis=2, keepdims=True)
+        self._rgb = clip01(l + (self._rgb - l) * sat)
 
     def tonemap(self, knee=0.80):
         """Shoulder above `knee` — additive light rolls off instead of clipping.
@@ -375,11 +561,11 @@ class Canvas:
         its literal value; only the accumulated glow is compressed. Whites land
         near 0.95 rather than flat 1.0, which reads as film rather than paper.
         """
-        x = self.rgb + self.add
+        x = self._rgb + self._add
         k = knee
         over = k + (1.0 - k) * np.tanh(np.maximum(x - k, 0.0) / max(1e-6, 1.0 - k))
-        self.rgb = clip01(np.where(x <= k, x, over))
-        self.add *= 0.0
+        self._rgb = clip01(np.where(x <= k, x, over))
+        self._add *= 0.0
 
     def image(self):
         """Output is display-referred end to end — no linear->sRGB encode.
@@ -387,8 +573,9 @@ class Canvas:
         Values were authored as sRGB from the start (ink #05080D is 5/8/13), so
         encoding again would lift every dark by ~2.5x against the reference.
         """
-        a = clip01(self.rgb)
+        a = clip01(self._rgb)
         return Image.fromarray((a * 255.0 + 0.5).astype(np.uint8), "RGB")
+
 
 
 # --------------------------------------------------------------------------

@@ -606,7 +606,7 @@ class Flow:
         _mono(p, 64, 128, f"INGRESS  {tl * 12.4:7.2f} MB/S", T.GREY, 10, 1.8, 0.9 * e)
         _mono(p, W - 64, 128, f"EGRESS  {tl * 9.1:7.2f} MB/S", T.GREY, 10, 1.8, 0.9 * e, "rs")
         _mono(p, 64, 624, "REQ/S 1180 · NODES 8 · LAT 24 MS", T.GREY, 9.5, 1.6, 0.85)
-        _mono(p, W - 64, 624, "FPS 30 / 450 FRAMES", T.GREY, 9.5, 1.6, 0.85, "rs")
+        _mono(p, W - 64, 624, f"FPS {T.FPS} / {T.NFRAMES} FRAMES", T.GREY, 9.5, 1.6, 0.85, "rs")
         c.commit()
 
 

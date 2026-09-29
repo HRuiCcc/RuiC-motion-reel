@@ -104,10 +104,19 @@ c.add += flash * np.array([0.86, 1.0, 0.90])   # 带品牌偏色，不是纯白
 ```bash
 ffmpeg -v error -ss <t> -i ref.mp4 -frames:v 1 -f rawvideo -pix_fmt rgb24 - | python3 -c "
 import sys, numpy as np
-a = np.frombuffer(sys.stdin.buffer.read(), np.uint8).reshape(720,1280,3).astype(np.float32)
+a = np.frombuffer(sys.stdin.buffer.read(), np.uint8).reshape(1080,1920,3).astype(np.float32)  # 按参考片实际尺寸改
 bg = a[::6,::6].reshape(-1,3)
 print('mean', bg.mean(0).round(1), 'median', np.median(bg,0), 'p95', np.percentile(bg,95,0))"
 ```
+
+### 60 fps 的动效标定
+
+交付是 60 fps，**6 帧只有 0.1 秒**。按 30 fps 练出来的手感（"入场 4~6 帧"）
+放到 60 fps 就是发飘，所以：
+
+- 主要运动（入场、推出）**按秒写**：一段 0.18~0.45 s，帧数由 `t * FPS` 反解，不要写死帧数
+- 缓动收尾要更硬：`out_expo(x, 3~4)` 在 60 fps 下才"停得住"
+- 剪辑点仍然落在强拍上；8 小节 15 秒的一小节 = 112.5 帧，用 `int(round(...))` 分帧
 
 判据：
 - **中位数**决定底色深浅（暗场片常在 5~30 之间）

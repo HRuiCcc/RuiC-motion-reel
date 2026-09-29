@@ -35,7 +35,7 @@ DOM / CSS / 文字 / SVG 这些内容由 Chrome 在 **CPU** 上光栅化（Skia�
 **编码一律走 NVENC，留 libx264 兜底。**
 
 ```bash
-ffmpeg -framerate 30 -i frames/f%04d.png \
+ffmpeg -framerate 60 -i frames/f%04d.png \   # 帧率跟 theme 的 FPS 走，默认 60
   -c:v h264_nvenc -preset p7 -tune hq -rc vbr -cq 19 -b:v 0 \
   -spatial_aq 1 -temporal_aq 1 -aq-strength 12 -bf 3 \
   -pix_fmt yuv420p out/silent.mp4
