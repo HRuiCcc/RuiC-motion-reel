@@ -101,6 +101,7 @@ references/            按需加载的细节文档
   gotchas.md           踩过的坑（近 40 条，症状与真因）
   performance.md       一帧花在哪、换显卡能省多少（实测）
 assets/fonts/          随包字体（OFL 1.1，见 NOTICE.md）
+assets/wechat-donate.png  赞赏码
 ```
 
 ## 设计上的几个立场
@@ -127,6 +128,15 @@ assets/fonts/          随包字体（OFL 1.1，见 NOTICE.md）
 - 重叠相加滤波要除以**窗和**（窗只加了一次）；除以窗平方和会引入 2× 纹波，
   且首尾样本会把舍入噪声放大上千倍
 - AAC 编码后**采样间峰值超过采样峰值**，采样峰值定 0.92 会得到 +0.3 dBTP（已超 0 dBFS）
+
+## 赞赏支持
+
+<div align="center">
+  <img src="assets/wechat-donate.png" width="300" alt="微信赞赏码" />
+  <p><strong>微信扫码赞赏</strong></p>
+</div>
+
+---
 
 ## 协议
 
