@@ -23,18 +23,18 @@ TAGLINE = "MADE WITH CODE"
 # 15.000 s exactly. One scene per bar, every cut lands on a downbeat.
 #   seconds = bars * 4 * 60 / BPM      BPM = 240 * bars / seconds
 #   8 bars -> 128 BPM | 6 bars -> 96 | 5 bars -> 80 | 4 bars -> 64
-# 60 fps: 900 frames. At 60 the easing is what carries a cut — a 6-frame
-# settle is 0.1 s now, so entrances want to be a beat long, not a third of one.
-FPS = 60
+# 30 fps: 450 frames. At 30 a 6-frame settle is 0.2 s, so entrances settle in
+# about 4~6 frames again and out_expo(x, 4~4.5) is the general-purpose landing.
+FPS = 30
 BPM = 128
 BEAT = 60.0 / BPM          # 0.46875 s
 BAR = BEAT * 4             # 1.875 s
 BARS = 8
 DUR = BAR * BARS           # 15.000 s
-NFRAMES = int(round(DUR * FPS))   # 900
+NFRAMES = int(round(DUR * FPS))   # 450
 
 # Layout is authored in W/H; OUT_W/OUT_H is the file that comes out. Delivery
-# is 1920x1080 at 60 fps. Keeping the authoring space at 720p is what makes
+# is 1920x1080 at 30 fps. Keeping the authoring space at 720p is what makes
 # that cheap to lay out: type, rules and everything vector is rendered at the
 # delivery size regardless, so only the soft masks (glow, grain, paper tooth)
 # are built at the authoring size and resampled once. A film that leans on

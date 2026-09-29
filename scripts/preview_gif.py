@@ -65,9 +65,9 @@ def main():
                     help="splice several spans, e.g. 0.3-1.1,4.4-5.2")
     ap.add_argument("--w", type=int, default=640)
     ap.add_argument("--fps", type=int, default=14)
-    ap.add_argument("--in-fps", type=float, default=60.0,
+    ap.add_argument("--in-fps", type=float, default=30.0,
                     help="frame rate of a PNG-sequence source; an mp4 is probed "
-                         "instead. Delivery is 60 fps, the reel's own FPS wins")
+                         "instead. Delivery is 30 fps, the reel's own FPS wins")
     ap.add_argument("--colors", type=int, default=224)
     ap.add_argument("--dither", default="sierra2_4a",
                     help="sierra2_4a | bayer:bayer_scale=N | none. Grainy footage "
