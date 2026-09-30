@@ -77,9 +77,13 @@ def main():
     for junk in ("__pycache__",):
         shutil.rmtree(os.path.join(dest, pkg, junk), ignore_errors=True)
     src = os.path.join(dest, pkg, "build.py")
-    t = open(src).read().replace("<pkg>", pkg)
-    open(src, "w").write(t)
-    open(os.path.join(dest, pkg, "__init__.py"), "w").close()
+    # The template ships UTF-8, and its comments have em-dashes in them. Without
+    # an explicit encoding, a Chinese Windows console's GBK default can't decode
+    # those bytes — and dies mid-copy, leaving a directory that looks installed
+    # but still has <pkg> in build.py and no STYLE.md.
+    t = open(src, encoding="utf-8").read().replace("<pkg>", pkg)
+    open(src, "w", encoding="utf-8").write(t)
+    open(os.path.join(dest, pkg, "__init__.py"), "w", encoding="utf-8").close()
 
     # faces
     fdir = os.path.join(SKILL, "assets", "fonts")
@@ -99,7 +103,7 @@ def main():
             style = next((c for c in CARDS if c["id"] == a.style), None)
             if style is None:
                 sys.exit("unknown style card %r — see style_lottery.py --list" % a.style)
-        with open(os.path.join(dest, "STYLE.md"), "w") as fh:
+        with open(os.path.join(dest, "STYLE.md"), "w", encoding="utf-8") as fh:
             fh.write(card_markdown(style))
 
     print("created", dest)

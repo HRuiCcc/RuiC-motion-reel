@@ -208,3 +208,18 @@
 43. **60 fps 下"按帧写死"的时长会缩水一半。**
     `if f > 6:` 在 30 fps 是 0.2 s，在 60 fps 变成 0.1 s。时间一律走 `t` / `tl`（秒），
     需要帧数就 `int(round(sec * T.FPS))`。同样的坑在 30→60 的迁移里会一次出现十几处。
+
+44. **文本文件一律写死 `encoding="utf-8"`。**
+    `open()` 不带 encoding 时用的是**系统默认编码**：中文 Windows 上是 GBK。
+    别以为只有中文会出事——`template/*.py` 里一个汉字都没有，杀人的是注释里的
+    **破折号 `—`**（U+2014 = `E2 80 94`，GBK 解不了第三字节 `0x94`），
+    `new_reel.py` 一读就是 `UnicodeDecodeError: 'gbk' codec can't decode
+    byte 0x94 in position 3420`。**只要有一个非 ASCII 字节就够。**
+    写出去的方向一样会炸：`--write` 抽到 `uv-litho` 那张牌（正文里有 SiO₂ 的 ₂，
+    U+2082）就是 `UnicodeEncodeError`。定位时别只看 `new_reel.py`，
+    `style_lottery.py` 也在写同一份 STYLE.md。
+    最坑的是它**死在复制到一半**：`mg/` 和包都躺好了、`build.py` 里的 `<pkg>` 还没替、
+    `__init__.py` 和 `STYLE.md` 都没生成——目录看着像装好了，其实 import 不起来。
+    （崩溃反倒是好事：GBK 能解中文，中文注释只会被**静默**解成乱码再按 GBK 写回去。）
+    验证方法：`PYTHONUTF8=0 LC_ALL=C` 跑一遍，默认编码就变成非 UTF-8，
+    等价于复现 Windows 的现场。

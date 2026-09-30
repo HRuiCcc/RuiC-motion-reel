@@ -312,7 +312,7 @@ def main():
         dest = os.path.abspath(os.path.expanduser(a.write))
         os.makedirs(dest, exist_ok=True)
         path = os.path.join(dest, "STYLE.md")
-        with open(path, "w") as fh:
+        with open(path, "w", encoding="utf-8") as fh:
             fh.write(card_markdown(card))
         print("wrote %s" % path)
 
