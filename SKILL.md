@@ -1,6 +1,6 @@
 ---
 name: ruic-motion-reel
-description: "用代码生成 15 秒动态图形（Motion Graphics）成片，默认交付 1920×1080 / 30fps：自研渲染引擎（超采样矢量/文字 + bloom/色差/颗粒）、真 3D 点云渲染、丝网印/riso 四色分色、代码合成配乐，画面与音乐全部由代码产出、不用任何外部美术素材、不用 AE。视觉语言有 15 张牌，默认随机抽一张（轻的、非 3D 的、编辑排版/手绘/纸艺/标本那类一样做），不默认做最炫的那一支。当用户说「用代码做个动效视频/动态图形/motion graphics」「生成一条 15 秒作品集样片/产品片/宣传短片」「按某种风格做视频」「给某个品牌/产品做一条片子」「复刻某条动效片的风格」，或要改已有片子的品牌、配色、节奏、镜头时使用。触发词：动效视频、动态图形、motion graphics、作品集样片、产品片、15 秒视频、1080p30、代码生成视频、ruic-motion-reel。"
+description: "用代码生成 15 秒动态图形（Motion Graphics）成片，默认交付 1920×1080 / 30fps：自研渲染引擎（超采样矢量/文字 + bloom/色差/颗粒）、真 3D 点云渲染、丝网印/riso 四色分色、代码合成配乐，画面与音乐全部由代码产出、不用任何外部美术素材、不用 AE。视觉语言有 16 张牌，默认随机抽一张（轻的、非 3D 的、编辑排版/手绘/纸艺/标本那类一样做），不默认做最炫的那一支。当用户说「用代码做个动效视频/动态图形/motion graphics」「生成一条 15 秒作品集样片/产品片/宣传短片」「按某种风格做视频」「给某个品牌/产品做一条片子」「复刻某条动效片的风格」，或要改已有片子的品牌、配色、节奏、镜头时使用。触发词：动效视频、动态图形、motion graphics、作品集样片、产品片、15 秒视频、1080p30、代码生成视频、ruic-motion-reel。"
 user-invocable: true
 metadata:
   dsh:
@@ -30,6 +30,7 @@ metadata:
 | **暗房 / 银盐** | 中性纸白 + 碳黑 + 一个安全灯红，无网点无霓虹 | 光晕 halation、片门微抖、两级银盐颗粒、点云刻线 |
 | **恒星 / 普朗克真彩色** | 深棕余烬底 + 黑体色温条 + 光谱线，没有一个是挑的 | 普朗克→CIE 1931→sRGB 反解颜色、点云磁流管、真谱线 |
 | **紫外光刻 / 半导体** | 近黑冷蓝腔体 + 405 nm 紫外紫 + 氧化层彩虹，一条片子走完版图→掩膜→曝光→显影→探针→划片 | 薄膜干涉真彩、递归版图生成、衍射曝光场（振幅孔径过环形 PSF 再平方）、彩色点云（每点带自己的颜色） |
+| **品牌亮色产品片** | 品牌自己的纸白 + 品牌色满幅，迪多尼大标题骑在发丝网格上，两场暗场换气 | 官方 lockup 真素材位图、亮底反转后期、品牌色与 token 逐个实测、产品界面自绘 |
 
 > 最后一支 **LITHO**（`docs/films/litho-wafer-15s.mp4`，1080p / 160 BPM / 10 小节 × 1.5 s）是这条线的样板，
 > 同时是牌堆里的 `uv-litho`。它的颜色全部追得到物理量：曝光光 = 405 nm 反解，
@@ -43,7 +44,7 @@ metadata:
 ```bash
 python3 {skill_dir}/scripts/style_lottery.py            # 随机抽一张
 python3 {skill_dir}/scripts/style_lottery.py --seed 7   # 可复现
-python3 {skill_dir}/scripts/style_lottery.py --list     # 看整副牌（15 张）
+python3 {skill_dir}/scripts/style_lottery.py --list     # 看整副牌（16 张）
 python3 {skill_dir}/scripts/style_lottery.py --avoid neon-hud   # 上一条抽过了
 ```
 

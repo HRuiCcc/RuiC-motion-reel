@@ -4,7 +4,7 @@
 画面和音乐全部由代码产出——不依赖任何外部美术素材，也不打开 After Effects。
 
 同一套引擎换一套视觉语言就是一支新片：暗色科技 HUD、riso 三色印刷、纸艺、银盐暗房、
-恒星普朗克配色、氰版蓝图、紫外光刻——下面那张表每一格各是一支，
+恒星普朗克配色、氰版蓝图、紫外光刻、品牌亮色产品片——下面那张表每一格各是一支，
 完整成片在 [`docs/films/`](docs/films/)。
 
 > **本 skill 由作者用 DeepSeek Flash 跑通**：从建模、排版、分色到配乐与出片，
@@ -19,8 +19,13 @@
 | ![flow](docs/preview/gifs/flow-field.gif) | ![riso](docs/preview/gifs/riso-cover.gif) | ![rack](docs/preview/gifs/rack-3d.gif) |
 | **银盐 / 暗房 · SILVER** | **恒星 · KELVIN** | **氰版蓝图 · MOTION ENGINE** |
 | ![silver](docs/preview/gifs/silver.gif) | ![kelvin](docs/preview/gifs/kelvin.gif) | ![blueprint](docs/preview/gifs/blueprint.gif) |
-| **纸艺 · DECKLE** | **紫外光刻 · LITHO** | |
-| ![deckle](docs/preview/gifs/deckle.gif) | ![litho](docs/preview/gifs/litho.gif) | |
+| **纸艺 · DECKLE** | **紫外光刻 · LITHO** | **品牌亮色产品片 · BRAND LIGHT** |
+| ![deckle](docs/preview/gifs/deckle.gif) | ![litho](docs/preview/gifs/litho.gif) | ![brand light](docs/preview/gifs/brand-light.gif) |
+
+> 最后一格是 **DeepSeek** 的品牌片（[`brand-light-demo-15s.mp4`](docs/films/brand-light-demo-15s.mp4)）：
+> 鲸鱼标与字标取 deepseek.com 官网内联 SVG 的原路径（不是重排的近似字体），
+> 色值逐条取自其设计 token（`--ds-color-brand` `#4d6bfe` 等），产品界面按其亮色主题自绘。
+> **这是用本引擎做的排版与管线演示，与 DeepSeek 无隶属关系，商标归其所有者。**
 
 
 ## 它能做什么
@@ -36,7 +41,7 @@
 - **颜色也能是被算出来的**：给一个物理量就直接得到颜色——黑体温度
   （Planck → CIE 1931 → sRGB）、谱线波长、薄膜干涉（氧化层厚度 → 反射光谱）。
   LITHO 里曝光光是 405 nm 反解的那支紫，晶圆彩虹是 SiO₂ 厚度 20–780 nm 积分出来的
-- **15 张风格牌，默认随机抽**：暗色霓虹只是其中一张，抽到编辑排版、手绘速写、
+- **16 张风格牌，默认随机抽**：暗色霓虹只是其中一张，抽到编辑排版、手绘速写、
   纸艺、标本图录、柔光渐变就照做——**轻的做干净了一样好看**。抽签结果写进项目的 `STYLE.md`
 - **出片链**：多进程逐场并行渲染 → H.264 编码 → 混音，1080p30 的 15 秒约 3~8 分钟（排版重的牌更久）
 
@@ -90,7 +95,7 @@ engine/                共享渲染引擎
 template/              可跑的最小工程（8 个场景 + 一段配乐）
 scripts/
   new_reel.py          从模板起一支新片（默认抽一张风格牌，写进项目 STYLE.md）
-  style_lottery.py     15 张视觉语言的牌堆，抽签 / 列牌 / --avoid 上一张
+  style_lottery.py     16 张视觉语言的牌堆，抽签 / 列牌 / --avoid 上一张
   preview_gif.py       成片或帧序列 → README 用的循环预览 GIF
   perf_probe.py        逐算子 CPU vs CuPy，看换显卡到底能省多少
 references/            按需加载的细节文档
@@ -119,10 +124,14 @@ assets/wechat-donate.png  赞赏码
 
 **品牌色必须实测。** 官网样式表、产品截图，不要凭印象挑。
 亮色品牌的暗色版不是另选一套色，而是把同一套色读到曝光的另一端。
+品牌 logo 同理——取官网的原始 SVG/PNG，不要手画，也不要把字标重排成「像 logo 的字体」。
+
+**亮底片的后期是反的。** 暗场里 bloom 阈值 0.68 就够，亮场要抬到 0.99（纸白本身 0.97），
+品牌色满幅时甚至要抬到 1 以上（品牌蓝的 B 通道 0.996 会把自己的底板点着）。阈值低于底板亮度，整帧就被自己的底色洗白——**这个症状看起来像调色不对，真因在阈值**。
 
 ## 已知的坑都写在代码注释里
 
-`references/gotchas.md` 有 20 多条，每条都是真踩过的，而且症状都不指向真因。举三个：
+`references/gotchas.md` 有 40 多条，每条都是真踩过的，而且症状都不指向真因。举三个：
 
 - PIL 的字形包围盒是相对 **ascender** 而非基线，按字高居中会整体低一个字身（168px 字号偏 147px）
 - 重叠相加滤波要除以**窗和**（窗只加了一次）；除以窗平方和会引入 2× 纹波，
