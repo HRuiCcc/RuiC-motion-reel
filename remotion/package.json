@@ -1,0 +1,25 @@
+{
+  "name": "ruic-motion-reel-remotion",
+  "private": true,
+  "version": "1.0.0",
+  "description": "24s motion promo reel — Remotion route (1920x1080@60, every frame and sound in code)",
+  "scripts": {
+    "dev": "remotion studio src/index.ts",
+    "score": "node scripts/score.mjs",
+    "render": "remotion render src/index.ts Reel out/reel.mp4",
+    "still": "remotion still src/index.ts Reel out/still.png",
+    "chunks": "bash scripts/render-chunks.sh",
+    "qa": "node scripts/qa.mjs"
+  },
+  "dependencies": {
+    "@remotion/cli": "4.0.484",
+    "@remotion/fonts": "4.0.484",
+    "react": "19.2.7",
+    "react-dom": "19.2.7",
+    "remotion": "4.0.484"
+  },
+  "devDependencies": {
+    "@types/react": "19.2.17",
+    "typescript": "6.0.3"
+  }
+}

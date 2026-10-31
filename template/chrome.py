@@ -41,8 +41,9 @@ def draw(p, t, scene_i, light=False):
            T.TRACK_HUD)
 
     # --- product reel title, top right
-    p.text(W - T.HUD_M, T.HUD_TOP, "PRODUCT REEL // 15 SEC", F.mono(T.S_HUD), ink,
-           T.TRACK_HUD, anchor="rs")
+    # 片长直接读 theme，别再写死 15 —— 改 BARS 这行字要跟着变
+    p.text(W - T.HUD_M, T.HUD_TOP, "PRODUCT REEL // %g SEC" % T.DUR,
+           F.mono(T.S_HUD), ink, T.TRACK_HUD, anchor="rs")
 
     _ = SC  # scenes owns the mark helper; chrome keeps to vector furniture
 
@@ -50,12 +51,13 @@ def draw(p, t, scene_i, light=False):
     p.text(T.HUD_M, T.HUD_BOT, _tc(t), F.mono(T.S_HUD), ink, T.TRACK_HUD)
 
     # --- scene name, bottom right
-    sid, sname, _ = T.SCENES[scene_i]
+    # 长片的小节数可能超过主题里登记的场次，循环取标签
+    sid, sname, _ = T.SCENES[scene_i % len(T.SCENES)]
     wlab = p.text(W - T.HUD_M, T.HUD_BOT, f"SCENE {sid} / {sname}", F.mono(T.S_HUD),
                   ink, T.TRACK_HUD, anchor="rs")
     p.rect(W - T.HUD_M - wlab - 11, T.HUD_BOT - 3.0, 5, 5, acc, 0.9)
 
-    # --- eight-dot indicator
+    # --- bar progress dots (one per bar, so longer films extend it)
     gap = 15.0
     x0 = DOT_X - gap * (T.BARS - 1) / 2.0
     for i in range(T.BARS):
@@ -101,7 +103,8 @@ POST = {
 
 
 def finish(c, t, scene_i):
-    q = dict(POST[scene_i])
+    # 长片的小节数可能超过 POST 里手调的条数，多出来的沿用最后一条
+    q = dict(POST.get(scene_i, POST[max(POST)]))
     q.update(getattr(c, "post_override", None) or {})
 
     c.bloom(thr=q["bloom"][0], knee=q["bloom"][1])

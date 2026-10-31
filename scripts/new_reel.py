@@ -57,6 +57,10 @@ def main():
                     help="style card id, 'random' (default draw), or 'none'")
     ap.add_argument("--force", action="store_true",
                     help="write into an existing non-empty directory")
+    ap.add_argument("--seconds", type=float, default=None,
+                    help="film length in seconds (24 -> 12 bars @ 120 BPM)")
+    ap.add_argument("--bars", type=int, default=None,
+                    help="force a bar count instead of auto-solving it")
     a = ap.parse_args()
 
     dest = os.path.abspath(os.path.expanduser(a.dest))
@@ -83,6 +87,36 @@ def main():
     # but still has <pkg> in build.py and no STYLE.md.
     t = open(src, encoding="utf-8").read().replace("<pkg>", pkg)
     open(src, "w", encoding="utf-8").write(t)
+
+    # Film length: rewrite the timeline block so the new project starts at the
+    # asked-for duration instead of 15 s. Bars stay one scene each.
+    if a.seconds or a.bars:
+        tp = os.path.join(dest, pkg, "theme.py")
+        tt = open(tp, encoding="utf-8").read()
+        if a.bars:
+            bars, bpm = a.bars, 240.0 * a.bars / (a.seconds or 15.0)
+        else:
+            best = None
+            for b in range(4, 25):
+                v = 240.0 * b / a.seconds
+                fpb = a.seconds * 30 / b
+                if 60 <= v <= 180 and abs(fpb - round(fpb)) < 1e-6:
+                    d = abs(v - 120.0)
+                    if best is None or d < best[0]:
+                        best = (d, b, v)
+            if best is None:
+                sys.exit("no clean BPM/bars for %ss — pass --bars" % a.seconds)
+            bars, bpm = best[1], best[2]
+        text_bpm = ("%.3f" % bpm).rstrip("0").rstrip(".")
+        secs = bars * 240.0 / bpm
+        tt = re.sub(r"^BARS = \d+$", "BARS = %d" % bars, tt, flags=re.M)
+        tt = re.sub(r"^DUR = BAR \* BARS.*$", "DUR = BAR * BARS           # %.3f s" % secs, tt, flags=re.M)
+        tt = re.sub(r"^NFRAMES = int\(round\(DUR \* FPS\)\).*$",
+                    "NFRAMES = int(round(DUR * FPS))   # %d" % round(secs * 30), tt, flags=re.M)
+        tt = re.sub(r"^BPM = [\d.]+$", "BPM = %s" % text_bpm, tt, flags=re.M)
+        open(tp, "w", encoding="utf-8").write(tt)
+        print("  length      ", "%d bars @ %s BPM = %.3f s"
+              % (bars, text_bpm, secs))
     open(os.path.join(dest, pkg, "__init__.py"), "w", encoding="utf-8").close()
 
     # faces

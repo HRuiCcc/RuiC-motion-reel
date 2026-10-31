@@ -1,0 +1,90 @@
+{
+  "fps": 60,
+  "bpm": 120,
+  "bars": 12,
+  "_note": "片长 = bars x 4 x 60 / bpm 秒。改 bars 必须同步改 scripts/score.mjs 的编曲段落表，否则音画会错位；SCENES 的场次也要正好铺满 bars 个小节。",
+  "scenes": [
+    {
+      "id": "ignite",
+      "start": 0,
+      "name": "IGNITION"
+    },
+    {
+      "id": "boot",
+      "start": 120,
+      "name": "TERMINAL"
+    },
+    {
+      "id": "kinetic",
+      "start": 240,
+      "name": "KINETIC"
+    },
+    {
+      "id": "neural",
+      "start": 360,
+      "name": "NEURAL"
+    },
+    {
+      "id": "hud",
+      "start": 480,
+      "name": "TELEMETRY"
+    },
+    {
+      "id": "cyclone",
+      "start": 600,
+      "name": "STACK"
+    },
+    {
+      "id": "glitch",
+      "start": 720,
+      "name": "GLITCH"
+    },
+    {
+      "id": "burst",
+      "start": 840,
+      "name": "BURST"
+    },
+    {
+      "id": "montage",
+      "start": 960,
+      "name": "MONTAGE"
+    },
+    {
+      "id": "build",
+      "start": 1080,
+      "name": "BUILD"
+    },
+    {
+      "id": "impact",
+      "start": 1200,
+      "name": "IMPACT"
+    },
+    {
+      "id": "finale",
+      "start": 1320,
+      "name": "FINALE"
+    }
+  ],
+  "hits": {
+    "ignition": 30,
+    "terminalIn": 120,
+    "slamA": 240,
+    "slamB": 270,
+    "slamC": 300,
+    "slamD": 330,
+    "neuralIn": 360,
+    "reticleLock": 540,
+    "stackIn": 600,
+    "glitchIn": 720,
+    "burst": 840,
+    "montage": [
+      960,
+      990,
+      1020,
+      1050
+    ],
+    "build": 1080,
+    "impact": 1200,
+    "finale": 1320
+  }
+}

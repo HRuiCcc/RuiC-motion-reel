@@ -10,6 +10,8 @@ its own bar, so a worker starting mid-reel is always that scene's first frame.
 """
 from __future__ import annotations
 
+import inspect
+
 import argparse
 import multiprocessing as mp
 import os
@@ -30,9 +32,44 @@ OUT = os.path.join(ROOT, "out")
 FRAMES = os.path.join(OUT, "frames")
 
 
+def _post(i):
+    # 长片的小节数可能超过 POST 里手调的条数
+    return chrome.POST.get(i, chrome.POST[max(chrome.POST)])
+
+
+def _make(cls, bar):
+    """同一场在长片里会被复用；带 seed 的场景按小节错开种子，
+    否则 12 小节里第 1、9 小节看起来就是复制粘贴。"""
+    try:
+        if "seed" in inspect.signature(cls.__init__).parameters:
+            return cls(seed=9 + bar * 37)
+    except (TypeError, ValueError):
+        pass
+    return cls()
+
+
+def scene_plan():
+    """小节 -> 场景类。
+
+    scenes.py 里可以写 SEQUENCE（长度必须 == BARS）来排多小节结构；
+    不写就按 SCENES 循环铺满 BARS。所以 BARS 可以大于场景数，
+    长片不必硬凑出 12 个场景类。"""
+    seq = getattr(SC, "SEQUENCE", None)
+    if seq:
+        if len(seq) != T.BARS:
+            raise SystemExit(
+                "scenes.py 的 SEQUENCE 有 %d 项，但 BARS = %d，两者必须一致"
+                % (len(seq), T.BARS))
+        return list(seq)
+    base = list(SC.SCENES)
+    if not base:
+        raise SystemExit("scenes.py 里没有任何场景")
+    return [base[i % len(base)] for i in range(T.BARS)]
+
+
 def scene_objects():
-    # one instance per scene, in bar order: SCENES lives in scenes.py
-    return [cls() for cls in SC.SCENES]
+    # one instance per bar, in bar order
+    return [_make(cls, i) for i, cls in enumerate(scene_plan())]
 
 
 def render_one(i, ss=2):
@@ -46,7 +83,7 @@ def render_one(i, ss=2):
         c = Canvas(T.W, T.H, ss=ss, out=(T.OUT_W, T.OUT_H))
         obj.render(c, tl, t)
         p = c.pass_()
-        chrome.draw(p, t, i, chrome.POST[i].get("light", False))
+        chrome.draw(p, t, i, _post(i).get("light", False))
         c.commit()
         chrome.finish(c, t, i)
         c.image().save(os.path.join(FRAMES, f"f{f:04d}.png"))
@@ -59,7 +96,7 @@ def render_at(i, tl, ss=2, name=None):
     c = Canvas(T.W, T.H, ss=ss, out=(T.OUT_W, T.OUT_H))
     obj.render(c, tl, t)
     p = c.pass_()
-    chrome.draw(p, t, i, chrome.POST[i].get("light", False))
+    chrome.draw(p, t, i, _post(i).get("light", False))
     c.commit()
     chrome.finish(c, t, i)
     path = os.path.join(OUT, name or f"at_s{i}_{tl:.3f}.png")
@@ -77,7 +114,7 @@ def render_still(i, tl_list, ss=2, tag=""):
         c = Canvas(T.W, T.H, ss=ss, out=(T.OUT_W, T.OUT_H))
         scene_objects()[i].render(c, tl, t)
         p = c.pass_()
-        chrome.draw(p, t, i, chrome.POST[i].get("light", False))
+        chrome.draw(p, t, i, _post(i).get("light", False))
         c.commit()
         chrome.finish(c, t, i)
         img = c.image()

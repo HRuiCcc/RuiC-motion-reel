@@ -20,11 +20,18 @@ PLATFORMS = "DESIGN · MOTION · CODE"
 TAGLINE = "MADE WITH CODE"
 
 # --- timeline ---------------------------------------------------------------
-# 15.000 s exactly. One scene per bar, every cut lands on a downbeat.
-#   seconds = bars * 4 * 60 / BPM      BPM = 240 * bars / seconds
-#   8 bars -> 128 BPM | 6 bars -> 96 | 5 bars -> 80 | 4 bars -> 64
-# 30 fps: 450 frames. At 30 a 6-frame settle is 0.2 s, so entrances settle in
-# about 4~6 frames again and out_expo(x, 4~4.5) is the general-purpose landing.
+# 片长不是常数，是 BPM × 小节算出来的：
+#     seconds = bars * 4 * 60 / BPM        BPM = 240 * bars / seconds
+# 选型（每小节整数帧最干净；30fps 下 1 帧 = 0.0333 s）：
+#     12 s  ->  8 bars @ 160 BPM   1.500 s/小节 = 45 帧
+#     15 s  ->  8 bars @ 128 BPM   1.875 s      = 56.25 帧  ← 默认样片规格
+#     24 s  -> 12 bars @ 120 BPM   2.000 s      = 60 帧     ← 宣传片起点
+#     30 s  -> 10 bars @  80 BPM   3.000 s      = 90 帧
+#     45 s  -> 12 bars @  64 BPM   3.750 s      = 112.5 帧
+#     60 s  -> 15 bars @  60 BPM   4.000 s      = 120 帧
+# 12 s 以下别做：BPM 会飙到 200+，切点密到看不见运动。
+# 45 s 以上别靠堆场景撑，按 acts 切（见 references/promo-brief.md）。
+# 一场景一小节是默认节奏；要让一场跨两小节，在 scenes.py 里写 SEQUENCE。
 FPS = 30
 BPM = 128
 BEAT = 60.0 / BPM          # 0.46875 s
@@ -32,6 +39,25 @@ BAR = BEAT * 4             # 1.875 s
 BARS = 8
 DUR = BAR * BARS           # 15.000 s
 NFRAMES = int(round(DUR * FPS))   # 450
+
+
+def plan(seconds, fps=None):
+    """给目标秒数反解一组 BPM / 小节数：每小节正好整数帧、BPM 落在 60~180。
+
+    >>> plan(24)        # 24 s @30fps
+    (120.0, 12)
+    """
+    fps = fps or FPS
+    best = None
+    for b in range(4, 25):
+        bpm = 240.0 * b / seconds
+        fpb = seconds * fps / b
+        if not (60 <= bpm <= 180) or abs(fpb - round(fpb)) > 1e-6:
+            continue
+        d = abs(bpm - 120.0)
+        if best is None or d < best[0]:
+            best = (d, round(bpm, 3), b)
+    return None if best is None else (best[1], best[2])
 
 # Layout is authored in W/H; OUT_W/OUT_H is the file that comes out. Delivery
 # is 1920x1080 at 30 fps. Keeping the authoring space at 720p is what makes

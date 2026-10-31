@@ -1,7 +1,20 @@
 # RuiC-motion-reel
 
-**用代码生成 15 秒动态图形（Motion Graphics）成片，交付 1920×1080 / 30fps（450 帧）。**
+**用代码生成动态图形 / 动效宣传片成片 —— 片长不是常数：12 / 15 / 24 / 30 / 45 / 60 秒都能做。**
 画面和音乐全部由代码产出——不依赖任何外部美术素材，也不打开 After Effects。
+
+片长由音乐网格算出来，不是"感觉差不多"：
+
+| 片长 | 小节（=镜头数） | BPM | 每小节 | 适合 |
+|---|---|---|---|---|
+| 12 s | 8 | 160 | 1.500 s | 纯冲击，无叙事 |
+| 15 s | 8 | 128 | 1.875 s | 作品集样片、单点 demo |
+| **24 s** | **12** | **120** | **2.000 s** | **宣传片起点：三个 act** |
+| 30 s | 10 | 80 | 3.000 s | 需要一点呼吸的品牌片 |
+| 45 s | 12 | 64 | 3.750 s | 产品发布、功能串烧 |
+| 60 s | 15 | 60 | 4.000 s | 开场短片、展会循环 |
+
+`seconds = bars × 240 / BPM`，两条路线都从这张表取值。
 
 同一套引擎换一套视觉语言就是一支新片：暗色科技 HUD、riso 三色印刷、纸艺、银盐暗房、
 恒星普朗克配色、氰版蓝图、紫外光刻、品牌亮色产品片——下面那张表每一格各是一支，
@@ -22,7 +35,11 @@
 | **纸艺 · DECKLE** | **紫外光刻 · LITHO** | **品牌亮色产品片 · BRAND LIGHT** |
 | ![deckle](docs/preview/gifs/deckle.gif) | ![litho](docs/preview/gifs/litho.gif) | ![brand light](docs/preview/gifs/brand-light.gif) |
 
-> 最后一格是 **DeepSeek** 的品牌片（[`brand-light-demo-15s.mp4`](docs/films/brand-light-demo-15s.mp4)）：
+> 另外还有一支 **24 秒动效宣传片**（[`promo-deepseek-24s.mp4`](docs/films/promo-deepseek-24s.mp4)，1080p60 / 120 BPM × 12 小节），
+> 走的是仓库里的 `remotion/` 路线：12 个镜头、全片文字与配乐都是代码写的，不是 15 秒模板拉长。
+> ![promo](docs/preview/gifs/promo-deepseek.gif)
+>
+> 同系列的 **DeepSeek** 品牌片（[`brand-light-demo-15s.mp4`](docs/films/brand-light-demo-15s.mp4)，Python 路线）：
 > 鲸鱼标与字标取 deepseek.com 官网内联 SVG 的原路径（不是重排的近似字体），
 > 色值逐条取自其设计 token（`--ds-color-brand` `#4d6bfe` 等），产品界面按其亮色主题自绘。
 > **这是用本引擎做的排版与管线演示，与 DeepSeek 无隶属关系，商标归其所有者。**
@@ -30,8 +47,8 @@
 
 ## 它能做什么
 
-- **15 秒成片，1920×1080 / 30fps**（450 帧），锁在音乐网格上（128 BPM × 8 小节 = 15.000 秒整），
-  每个场景正好一小节，**每一次剪辑都落在强拍上**
+- **任意时长的成片**，锁在音乐网格上（`seconds = bars × 240 / BPM`），每个场景一小节，
+  **每一次剪辑都落在强拍上**；`BARS` 不必等于场景数（场景会自动循环铺满）
 - **字体排版**：2× 超采样矢量/文字通道、字距排版、字号按目标宽度反解
 - **真 3D**：参数曲面建模 + 点云渲染（排序散射做精确遮挡）+ 隐藏线线刻
 - **印刷管线**：分色成四块油墨版、旋转网线做网点、乘法定律叠印、
@@ -66,8 +83,9 @@ Agent 会在你说「用代码做个动效视频 / 生成一条 15 秒作品集�
 **手动用**：
 
 ```bash
-# 起一支新片
+# 起一支新片（默认 15 秒；宣传片直接用 --seconds 24）
 python3 ~/.agents/skills/ruic-motion-reel/scripts/new_reel.py ~/my-reel --name my_reel
+python3 ~/.agents/skills/ruic-motion-reel/scripts/new_reel.py ~/my-promo --seconds 24
 # 默认抽一张风格牌（写进 STYLE.md）；--style <id> 指定，--style none 关掉
 
 cd ~/my-reel
@@ -93,11 +111,15 @@ engine/                共享渲染引擎
   anim.py              缓动、错帧、值噪声
   dsp.py               合成器 DSP：FFT 时变滤波、磁带抖晃、混响、频谱分析
 template/              可跑的最小工程（8 个场景 + 一段配乐）
+remotion/              24 秒宣传片的 Remotion 路线（React 组件 + 浏览器渲染，60fps）
 scripts/
   new_reel.py          从模板起一支新片（默认抽一张风格牌，写进项目 STYLE.md）
   style_lottery.py     16 张视觉语言的牌堆，抽签 / 列牌 / --avoid 上一张
   preview_gif.py       成片或帧序列 → README 用的循环预览 GIF
   perf_probe.py        逐算子 CPU vs CuPy，看换显卡到底能省多少
+references/
+  promo-brief.md       一句话 brief → 分镜：片长选型、16 项要素表、24 秒 12 刀模板
+  remotion-default.md  为什么常规成片默认走 Remotion、显卡到底在哪一步出力
 references/            按需加载的细节文档
   design-grammar.md    设计语法：时间网格、排版、构图、动效、亮度校准
   three-d.md           3D 引擎用法与配方
