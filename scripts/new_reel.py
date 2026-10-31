@@ -1,7 +1,11 @@
 #!/usr/bin/env python3
 """Start a new reel from the template.
 
-    python3 new_reel.py <project_dir> [--name pkg] [--style random|none|<id>] [--force]
+    python3 new_reel.py <project_dir> --brief "做一条 20 秒暖色胶片感的咖啡品牌片"
+    python3 new_reel.py <project_dir> [--seconds 24] [--style <id>|none] [--force]
+
+--brief 是主入口：一句话读成 SPEC.md（时长/画幅/冷暖/质感/节奏/语言 → 色板、字体、
+运动语法、分镜骨架），并直接写进 theme.py。不给 brief 就是一份中性模板。
 
 Creates a self-contained project:
 
@@ -20,8 +24,10 @@ look, and a draw keeps a run of films from all being that one film.
 from __future__ import annotations
 
 import argparse
+import json
 import os
 import random
+import pathlib
 import re
 import shutil
 import sys
@@ -53,8 +59,11 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("dest")
     ap.add_argument("--name", default=None)
-    ap.add_argument("--style", default="random",
-                    help="style card id, 'random' (default draw), or 'none'")
+    ap.add_argument("--brief", default=None,
+                    help="一句话需求；会推成 SPEC.md 并改写 theme.py 的色板/网格/画幅")
+    ap.add_argument("--style", default="none",
+                    help="参考卡 id（可选）。默认不抽牌：样式由 --brief 推出来；"
+                         "'random' 才抽一张")
     ap.add_argument("--force", action="store_true",
                     help="write into an existing non-empty directory")
     ap.add_argument("--seconds", type=float, default=None,
@@ -90,7 +99,7 @@ def main():
 
     # Film length: rewrite the timeline block so the new project starts at the
     # asked-for duration instead of 15 s. Bars stay one scene each.
-    if a.seconds or a.bars:
+    if (a.seconds or a.bars) and not a.brief:
         tp = os.path.join(dest, pkg, "theme.py")
         tt = open(tp, encoding="utf-8").read()
         if a.bars:
@@ -129,6 +138,18 @@ def main():
     if not os.path.exists(mark):
         placeholder_mark(mark)
 
+    # 一句话 -> SPEC：先读时长/画幅/冷暖/质感，再推色板和分镜骨架
+    spec = None
+    if a.brief:
+        from brief import apply_to_theme, build_spec, spec_markdown
+
+        spec = build_spec(a.brief)
+        apply_to_theme(pathlib.Path(dest, pkg, "theme.py"), spec)
+        with open(os.path.join(dest, "SPEC.md"), "w", encoding="utf-8") as fh:
+            fh.write(spec_markdown(spec))
+        with open(os.path.join(dest, "SPEC.json"), "w", encoding="utf-8") as fh:
+            json.dump(spec, fh, ensure_ascii=False, indent=2)
+
     style = None
     if a.style != "none":
         if a.style == "random":
@@ -142,6 +163,12 @@ def main():
 
     print("created", dest)
     print("  package     ", pkg)
+    if spec is not None:
+        print("  brief       ", spec["brief"])
+        print("  spec        ", "%g s / %d bars @ %g BPM / %dx%d @ %dfps / %s-%s"
+              % (spec["seconds"], spec["bars"], spec["bpm"], spec["out"][0], spec["out"][1],
+                 spec["fps"], spec["temperature"], spec["texture"]))
+        print("                ", os.path.join(dest, "SPEC.md"))
     if style is not None:
         print("  style       ", style["id"], "—", style["name"])
         print("                ", style["idiom"])
